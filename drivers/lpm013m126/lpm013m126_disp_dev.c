@@ -39,13 +39,12 @@
 #define LPM013M126_DISP_COLOR_DEPTH    (8U)
 #endif
 
-static void _lpm013m126_map(const disp_dev_t *dev, uint16_t x1, uint16_t x2,
-                  uint16_t y1, uint16_t y2, const uint16_t *color)
+static void _lpm013m126_map(const disp_dev_t *dev, const disp_dev_area_t *area, const uint16_t *color)
 {
     lpm013m126_t *lpm013m126 = (lpm013m126_t *)dev;
     assert(dev);
 
-    lpm013m126_pixmap(lpm013m126, x1, x2, y1, y2, color);
+    lpm013m126_pixmap(lpm013m126, area->x1, area->x2, area->y1, area->y2, color);
 }
 
 static uint16_t _lpm013m126_height(const disp_dev_t *disp_dev)
