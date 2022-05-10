@@ -91,8 +91,6 @@ int cst816s_read(const cst816s_t *dev, cst816s_touch_data_t *data)
 int cst816s_init(cst816s_t *dev, const cst816s_params_t *params,
                  cst816s_irq_cb_t cb, void *arg)
 {
-    uint8_t buf[10];
-
     assert(dev && params);
     dev->params = params;
     dev->cb = cb;
