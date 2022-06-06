@@ -31,17 +31,19 @@
 
 #include "mtd.h"
 
-#include "esp_flash_data_types.h"
 #include "esp_partition.h"
 
 #ifdef MCU_ESP32
 
+#include "esp_flash_partitions.h"
+#include "esp_spi_flash.h"
 #include "rom/cache.h"
 #include "rom/spi_flash.h"
-#include "esp_spi_flash.h"
+#include "soc/soc.h"
 
 #else /* MCU_ESP32 */
 
+#include "esp_flash_data_types.h"
 #include "rom_functions.h"
 #include "spi_flash.h"
 
@@ -60,6 +62,11 @@ mtd_dev_t* mtd0 = 0;
 
 static mtd_dev_t  _flash_dev;
 static mtd_desc_t _flash_driver;
+
+#ifdef MODULE_VFS_DEFAULT
+#include "vfs_default.h"
+VFS_AUTO_MOUNT(littlefs2, { .dev = &_flash_dev }, VFS_DEFAULT_NVM(0), 0);
+#endif
 
 #ifdef MCU_ESP8266
 
@@ -127,6 +134,7 @@ void spi_flash_drive_init (void)
     _flash_driver.write_page = &_flash_write_page;
     _flash_driver.erase = &_flash_erase;
     _flash_driver.power = &_flash_power;
+    _flash_driver.flags = MTD_DRIVER_FLAG_CLEARING_OVERWRITE;
 
     /* first, set the beginning of flash to 0x0 to read partition table */
     _flash_beg  = 0x0;
@@ -200,6 +208,9 @@ void spi_flash_drive_init (void)
 
     _flash_dev.pages_per_sector = _flashchip->sector_size / _flashchip->page_size;
     _flash_dev.page_size = _flashchip->page_size;
+    /* Emulation for smaller / unaligned writes is present, but at reduced
+     * performance */
+    _flash_dev.write_size = 4;
 
     DEBUG("%s flashchip chip_size=%d block_size=%d sector_size=%d page_size=%d\n", __func__,
           _flashchip->chip_size, _flashchip->block_size,
@@ -382,10 +393,12 @@ esp_err_t IRAM_ATTR spi_flash_write(size_t addr, const void *buff, size_t size)
     RETURN_WITH_ESP_ERR_CODE(result);
 }
 
+#if !IS_USED(MODULE_ESP_IDF_SPI_FLASH)
 esp_err_t IRAM_ATTR spi_flash_erase_sector(size_t sector)
 {
     return spi_flash_erase_range(sector * _flashchip->sector_size, 1);
 }
+#endif
 
 esp_err_t IRAM_ATTR spi_flash_erase_range(size_t addr, size_t size)
 {

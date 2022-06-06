@@ -36,10 +36,12 @@ extern "C" {
  * @{
  */
 #define COAP_OPT_URI_HOST       (3)
+#define COAP_OPT_ETAG           (4)
 #define COAP_OPT_OBSERVE        (6)
 #define COAP_OPT_LOCATION_PATH  (8)
 #define COAP_OPT_URI_PATH       (11)
 #define COAP_OPT_CONTENT_FORMAT (12)
+#define COAP_OPT_MAX_AGE        (14)
 #define COAP_OPT_URI_QUERY      (15)
 #define COAP_OPT_ACCEPT         (17)
 #define COAP_OPT_LOCATION_QUERY (20)
@@ -167,6 +169,13 @@ extern "C" {
  * @{
  */
 #define COAP_TOKEN_LENGTH_MAX    (8)
+/** @} */
+
+/**
+ * @name    CoAP option constants
+ * @{
+ */
+#define COAP_ETAG_LENGTH_MAX     (8U)   /**< maximum length of the ETag option */
 /** @} */
 
 /**

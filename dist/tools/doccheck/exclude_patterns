@@ -4906,11 +4906,13 @@ boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member LED0_TOGGLE \(macro
 boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member LED_PORT \(macro definition\) of file board\.h is not documented\.
 boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member MTD_0 \(macro definition\) of file board\.h is not documented\.
 boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member MTD_1 \(macro definition\) of file board\.h is not documented\.
+boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member MTD_2 \(macro definition\) of file board\.h is not documented\.
 boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member MTD_NUMOF \(macro definition\) of file board\.h is not documented\.
 boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member XTIMER_HZ \(macro definition\) of file board\.h is not documented\.
 boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member XTIMER_WIDTH \(macro definition\) of file board\.h is not documented\.
 boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member mtd0 \(variable\) of file board\.h is not documented\.
 boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member mtd1 \(variable\) of file board\.h is not documented\.
+boards/same54\-xpro/include/board\.h:[0-9]+: warning: Member mtd2 \(variable\) of file board\.h is not documented\.
 boards/same54\-xpro/include/eui_provider_params\.h:[0-9]+: warning: Member EUI48_PROVIDER_FUNC \(macro definition\) of file eui_provider_params\.h is not documented\.
 boards/same54\-xpro/include/eui_provider_params\.h:[0-9]+: warning: Member EUI48_PROVIDER_TYPE \(macro definition\) of file eui_provider_params\.h is not documented\.
 boards/same54\-xpro/include/periph_conf\.h:[0-9]+: warning: Member ADC_DEV \(macro definition\) of file periph_conf\.h is not documented\.
@@ -10084,6 +10086,8 @@ drivers/io1_xplained/include/io1_xplained_internals\.h:[0-9]+: warning: Member I
 drivers/io1_xplained/include/io1_xplained_params\.h:[0-9]+: warning: Member IO1_XPLAINED_PARAMS \(macro definition\) of file io1_xplained_params\.h is not documented\.
 drivers/io1_xplained/include/io1_xplained_params\.h:[0-9]+: warning: Member IO1_XPLAINED_PARAM_ADDR \(macro definition\) of file io1_xplained_params\.h is not documented\.
 drivers/io1_xplained/include/io1_xplained_params\.h:[0-9]+: warning: Member IO1_XPLAINED_SAUL_INFO \(macro definition\) of file io1_xplained_params\.h is not documented\.
+drivers/ir_nec/include/ir_nec_params\.h:35: warning: Member IR_NEC_PARAM_PIN \(macro definition\) of file ir_nec_params\.h is not documented\.
+drivers/ir_nec/include/ir_nec_params\.h:39: warning: Member IR_NEC_PARAMS \(macro definition\) of file ir_nec_params\.h is not documented\.
 drivers/isl29020/include/isl29020\-internal\.h:[0-9]+: warning: Member ISL29020_CMD_EN \(macro definition\) of file isl29020\-internal\.h is not documented\.
 drivers/isl29020/include/isl29020\-internal\.h:[0-9]+: warning: Member ISL29020_CMD_LIGHT \(macro definition\) of file isl29020\-internal\.h is not documented\.
 drivers/isl29020/include/isl29020\-internal\.h:[0-9]+: warning: Member ISL29020_CMD_MODE \(macro definition\) of file isl29020\-internal\.h is not documented\.
@@ -14273,6 +14277,8 @@ sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_ACCEPT \(macro definiti
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_BLOCK1 \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_BLOCK2 \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_CONTENT_FORMAT \(macro definition\) of group net_coap is not documented\.
+sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_ETAG \(macro definition\) of group net_coap is not documented\.
+sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_MAX_AGE \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_LOCATION_PATH \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_LOCATION_QUERY \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_OBSERVE \(macro definition\) of group net_coap is not documented\.

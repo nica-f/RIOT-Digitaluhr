@@ -88,6 +88,7 @@
 #ifdef RIOT_VERSION
 #include "bitfield.h"
 #include "byteorder.h"
+#include "iolist.h"
 #include "net/coap.h"
 #else
 #include "coap.h"
@@ -147,6 +148,13 @@ extern "C" {
 #define CONFIG_NANOCOAP_BLOCK_SIZE_EXP_MAX  (6)
 #endif
 
+/**
+ * @brief CoAP block-wise-transfer size that should be used by default
+ */
+#ifndef CONFIG_NANOCOAP_BLOCKSIZE_DEFAULT
+#define CONFIG_NANOCOAP_BLOCKSIZE_DEFAULT  COAP_BLOCKSIZE_64
+#endif
+
 /** @brief   Maximum length of a query string written to a message */
 #ifndef CONFIG_NANOCOAP_QS_MAX
 #define CONFIG_NANOCOAP_QS_MAX             (64)
@@ -193,13 +201,28 @@ typedef struct {
 
 /**
  * @brief   CoAP PDU parsing context structure
+ *
+ * When this struct is used to assemble the header, @p payload is used as the
+ * write pointer and @p payload_len contains the number of free bytes left in
+ * then packet buffer pointed to by @ref coap_pkt_t::hdr
+ *
+ * When the header was written, @p payload must not be changed, it must remain
+ * pointing to the end of the header.
+ * @p payload_len must then be set to the size of the payload that was further
+ * copied into the packet buffer, after the header.
+ *
+ * @ref coap_pkt_t::snips can be used to attach further payload buffers without copying them
+ * into the CoAP packet buffer.
+ * If there are any, they will be attached in order after the last payload byte
+ * (or header byte) in the original CoAP packet buffer.
  */
 typedef struct {
     coap_hdr_t *hdr;                                  /**< pointer to raw packet   */
     uint8_t *token;                                   /**< pointer to token
                                                        * @deprecated Use coap_get_token(),
                                                        *     Will be removed after 2022.10. */
-    uint8_t *payload;                                 /**< pointer to payload      */
+    uint8_t *payload;                                 /**< pointer to end of the header */
+    iolist_t *snips;                                  /**< payload snips (optional)*/
     uint16_t payload_len;                             /**< length of payload       */
     uint16_t options_len;                             /**< length of options array */
     coap_optpos_t options[CONFIG_NANOCOAP_NOPTS_MAX]; /**< option offset array     */
@@ -289,8 +312,8 @@ typedef const struct {
 typedef struct {
     size_t offset;                  /**< offset of received data            */
     uint32_t blknum;                /**< block number                       */
-    unsigned szx;                   /**< szx value                          */
-    int more;                       /**< -1 for no option, 0 for last block,
+    uint8_t szx;                    /**< szx value                          */
+    int8_t more;                    /**< -1 for no option, 0 for last block,
                                           1 for more blocks coming          */
 } coap_block1_t;
 
@@ -430,7 +453,9 @@ static inline unsigned coap_get_total_hdr_len(const coap_pkt_t *pkt)
 }
 
 /**
- * @brief   Get the total length of a CoAP packet
+ * @brief   Get the total length of a CoAP packet in the packet buffer
+ *
+ * @note This does not include possible payload snips.
  *
  * @param[in]   pkt   CoAP packet
  *
@@ -931,7 +956,7 @@ static inline int coap_get_block2(coap_pkt_t *pkt, coap_block1_t *block)
  * @returns     0 if more flag is not set
  * @returns     1 if more flag is set
  */
-int coap_get_blockopt(coap_pkt_t *pkt, uint16_t option, uint32_t *blknum, unsigned *szx);
+int coap_get_blockopt(coap_pkt_t *pkt, uint16_t option, uint32_t *blknum, uint8_t *szx);
 
 /**
  * @brief    Check whether any of the packet's options that are critical

@@ -334,6 +334,11 @@ ifneq (,$(filter shell_commands,$(USEMODULE)))
   endif
 endif
 
+ifneq (,$(filter md5sum sha1sum sha256sum,$(USEMODULE)))
+  USEMODULE += vfs_util
+  USEMODULE += hashes
+endif
+
 ifneq (,$(filter posix_semaphore,$(USEMODULE)))
   USEMODULE += sema_deprecated
   USEMODULE += ztimer64_usec
@@ -559,6 +564,10 @@ ifneq (,$(filter vfs_default,$(USEMODULE)))
   DEFAULT_MODULE += vfs_auto_mount
 endif
 
+ifneq (,$(filter vfs_util,$(USEMODULE)))
+  USEMODULE += vfs
+endif
+
 ifneq (,$(filter vfs,$(USEMODULE)))
   USEMODULE += posix_headers
   ifeq (native, $(BOARD))
@@ -614,6 +623,12 @@ ifneq (,$(filter l2filter_%,$(USEMODULE)))
   USEMODULE += l2filter
 endif
 
+ifneq (,$(filter gcoap_fileserver,$(USEMODULE)))
+  USEMODULE += gcoap
+  USEMODULE += checksum
+  USEMODULE += vfs
+endif
+
 ifneq (,$(filter gcoap_forward_proxy,$(USEMODULE)))
   USEMODULE += gcoap
   USEMODULE += uri_parser
@@ -660,6 +675,16 @@ ifneq (,$(filter nanocoap_sock,$(USEMODULE)))
   USEMODULE += sock_udp
   USEMODULE += sock_util
   USEMODULE += ztimer_msec
+endif
+
+ifneq (,$(filter nanocoap_cache,$(USEMODULE)))
+  USEMODULE += ztimer_sec
+  USEMODULE += hashes
+endif
+
+ifneq (,$(filter nanocoap_vfs,$(USEMODULE)))
+  USEMODULE += nanocoap_sock
+  USEMODULE += vfs
 endif
 
 ifneq (,$(filter nanocoap_%,$(USEMODULE)))

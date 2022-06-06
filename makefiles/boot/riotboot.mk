@@ -45,6 +45,7 @@ $(BINDIR_RIOTBOOT)/slot0.elf: ROM_OFFSET=$(SLOT0_IMAGE_OFFSET)
 $(BINDIR_RIOTBOOT)/slot1.elf: FW_ROM_LEN=$$((SLOT1_LEN - $(RIOTBOOT_HDR_LEN)))
 $(BINDIR_RIOTBOOT)/slot1.elf: ROM_OFFSET=$(SLOT1_IMAGE_OFFSET)
 SLOT_RIOT_ELFS = $(BINDIR_RIOTBOOT)/slot0.elf $(BINDIR_RIOTBOOT)/slot1.elf
+DEBUG_ELFFILE ?= $(BINDIR_RIOTBOOT)/slot0.elf
 
 # ensure both slot elf files are always linked
 # this ensures that both "make test" and "make test-murdock" can rely on them
@@ -84,7 +85,7 @@ riotboot/flash-bootloader: riotboot/bootloader/flash
 # avoid circular dependency against clean
 riotboot/bootloader/%: $$(if $$(filter riotboot/bootloader/clean,$$@),,$$(BUILDDEPS) pkg-prepare)
 	$(Q)/usr/bin/env -i \
-		QUIET=$(QUIET) PATH="$(PATH)"\
+		QUIET=$(QUIET) PATH="$(PATH)" USER="$(USER)"\
 		EXTERNAL_BOARD_DIRS="$(EXTERNAL_BOARD_DIRS)" BOARD=$(BOARD)\
 		DEBUG_ADAPTER_ID=$(DEBUG_ADAPTER_ID) \
 		IOTLAB_NODE=$(IOTLAB_NODE) \
@@ -155,7 +156,22 @@ riotboot/flash: riotboot/flash-slot0 riotboot/flash-bootloader
 # make applications that use the riotboot feature default to actually using it
 # Target 'all' will generate the combined file directly.
 # It also makes 'flash' and 'flash-only' work without specific command.
-FLASHFILE = $(RIOTBOOT_EXTENDED_BIN)
+#
+# Special case for uf2conv where bootloader and slot0 are both flashed
+# independently
+ifneq (,$(filter uf2conv,$(PROGRAMMER)))
+  ifneq (,$(filter riotboot/flash-extended-slot0 riotboot/flash-combined-slot0,$(MAKECMDGOALS)))
+    $(error riotboot/flash-extended-slot0 riotboot/flash-combined-slot0 are not supported with uf2conv)
+  endif
+  FLASHFILE = $(BOOTLOADER_BIN)/riotboot.bin
+  riotboot/flash-slot0-remount: riotboot/flash-slot0
+	sleep $(TERM_DELAY)
+	$(PREFLASHER_PREFIX)$(PREFLASHER) $(PREFFLAGS)
+	sleep $(PREFLASH_DELAY)
+  flash: riotboot/flash-slot0-remount
+else
+  FLASHFILE = $(RIOTBOOT_EXTENDED_BIN)
+endif
 
 else
 riotboot:

@@ -38,8 +38,9 @@
 #include "debug.h"
 
 enum {
-    STATE_SEND_REQUEST,
-    STATE_AWAIT_RESPONSE,
+    STATE_REQUEST_SEND,     /**< request was just sent or will be sent again */
+    STATE_RESPONSE_RCVD,    /**< response received but might be invalid      */
+    STATE_RESPONSE_OK,      /**< valid response was received                 */
 };
 
 typedef struct {
@@ -121,15 +122,13 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
                                  coap_request_cb_t cb, void *arg)
 {
     ssize_t tmp, res = 0;
-    const void *pdu = pkt->hdr;
-    const size_t pdu_len = coap_get_total_len(pkt);
     const unsigned id = coap_get_id(pkt);
     void *payload, *ctx = NULL;
     const uint8_t *token = coap_get_token(pkt);
     uint8_t token_len = coap_get_token_len(pkt);
+    uint8_t state = STATE_REQUEST_SEND;
 
-    unsigned state = STATE_SEND_REQUEST;
-
+    /* random timeout, deadline for receive retries */
     uint32_t timeout = random_uint32_range(CONFIG_COAP_ACK_TIMEOUT_MS * US_PER_MS,
                                            CONFIG_COAP_ACK_TIMEOUT_MS * CONFIG_COAP_RANDOM_FACTOR_1000);
     uint32_t deadline = _deadline_from_interval(timeout);
@@ -140,19 +139,25 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
     /* check if we expect a reply */
     const bool confirmable = coap_get_type(pkt) == COAP_TYPE_CON;
 
-    /* try receiving another packet without re-request */
-    bool retry_rx = false;
+    /* Create the first payload snip from the request buffer */
+    iolist_t head = {
+        .iol_next = pkt->snips,
+        .iol_base = pkt->hdr,
+        .iol_len  = coap_get_total_len(pkt),
+    };
 
     while (1) {
         switch (state) {
-        case STATE_SEND_REQUEST:
-            DEBUG("nanocoap: send %u bytes (%u tries left)\n", (unsigned)pdu_len, tries_left);
+        case STATE_REQUEST_SEND:
+            DEBUG("nanocoap: send %u bytes (%u tries left)\n",
+                  (unsigned)iolist_size(&head), tries_left);
+
             if (--tries_left == 0) {
                 DEBUG("nanocoap: maximum retries reached\n");
                 return -ETIMEDOUT;
             }
 
-            res = sock_udp_send(sock, pdu, pdu_len, NULL);
+            res = sock_udp_sendv(sock, &head, NULL);
             if (res <= 0) {
                 DEBUG("nanocoap: error sending coap request, %d\n", (int)res);
                 return res;
@@ -165,9 +170,9 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
 
             /* ctx must have been released at this point */
             assert(ctx == NULL);
-            state = STATE_AWAIT_RESPONSE;
             /* fall-through */
-        case STATE_AWAIT_RESPONSE:
+        case STATE_RESPONSE_RCVD:
+        case STATE_RESPONSE_OK:
             DEBUG("nanocoap: waiting for response (timeout: %"PRIu32" µs)\n",
                   _deadline_left_us(deadline));
             tmp = sock_udp_recv_buf(sock, &payload, &ctx, _deadline_left_us(deadline), NULL);
@@ -178,15 +183,14 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
              * releases the packet.
              * This assertion will trigger should the behavior change in the future.
              */
-            if (retry_rx) {
+            if (state != STATE_REQUEST_SEND) {
                 assert(tmp == 0 && ctx == NULL);
             }
             if (tmp == 0) {
                 /* no more data */
                 /* sock_udp_recv_buf() needs to be called in a loop until ctx is NULL again
                  * to release the buffer */
-                if (retry_rx) {
-                    retry_rx = false;
+                if (state == STATE_RESPONSE_RCVD) {
                     continue;
                 }
                 return res;
@@ -196,7 +200,7 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
                 DEBUG("nanocoap: timeout\n");
                 timeout *= 2;
                 deadline = _deadline_from_interval(timeout);
-                state = STATE_SEND_REQUEST;
+                state = STATE_REQUEST_SEND;
                 continue;
             }
             if (res < 0) {
@@ -205,17 +209,17 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
             }
 
             /* parse response */
+            state = STATE_RESPONSE_RCVD;
             if (coap_parse(pkt, payload, res) < 0) {
                 DEBUG("nanocoap: error parsing packet\n");
-                retry_rx = true;
                 continue;
             }
             else if (_id_or_token_missmatch(pkt, id, token, token_len)) {
                 DEBUG("nanocoap: ID mismatch %u != %u\n", coap_get_id(pkt), id);
-                retry_rx = true;
                 continue;
             }
 
+            state = STATE_RESPONSE_OK;
             DEBUG("nanocoap: response code=%i\n", coap_get_code(pkt));
             switch (coap_get_type(pkt)) {
             case COAP_TYPE_RST:
@@ -385,6 +389,52 @@ static int _fetch_block(nanocoap_sock_t *sock, uint8_t *buf, size_t len,
     pkt.payload_len = 0;
 
     return nanocoap_sock_request_cb(sock, &pkt, _block_cb, ctx);
+}
+
+int nanocoap_sock_block_request(coap_block_request_t *req,
+                                const void *data, size_t len, bool more,
+                                coap_request_cb_t callback, void *arg)
+{
+    /* clip the payload at the block size */
+    if (len > coap_szx2size(req->blksize)) {
+        len = coap_szx2size(req->blksize);
+        more = true;
+    }
+
+    int res;
+    uint8_t buf[CONFIG_NANOCOAP_BLOCK_HEADER_MAX];
+    iolist_t snip = {
+        .iol_base = (void *)data,
+        .iol_len  = len,
+    };
+
+    coap_pkt_t pkt = {
+        .hdr = (void *)buf,
+        .snips = &snip,
+    };
+
+    uint8_t *pktpos = (void *)pkt.hdr;
+    uint16_t lastonum = 0;
+
+    pktpos += coap_build_hdr(pkt.hdr, COAP_TYPE_CON, NULL, 0, req->method, _get_id());
+    pktpos += coap_opt_put_uri_pathquery(pktpos, &lastonum, req->path);
+    pktpos += coap_opt_put_uint(pktpos, lastonum, COAP_OPT_BLOCK1,
+                                (req->blknum << 4) | req->blksize | (more ? 0x8 : 0));
+    if (len) {
+        /* set payload marker */
+        *pktpos++ = 0xFF;
+    }
+
+    pkt.payload = pktpos;
+    pkt.payload_len = 0;
+
+    res = nanocoap_sock_request_cb(&req->sock, &pkt, callback, arg);
+    if (res < 0) {
+        return res;
+    }
+
+    ++req->blknum;
+    return len;
 }
 
 int nanocoap_sock_get_blockwise(nanocoap_sock_t *sock, const char *path,

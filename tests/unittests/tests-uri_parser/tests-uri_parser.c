@@ -48,8 +48,7 @@
         }                                                                   \
     } while (0)
 
-#define VEC_MSG_LEN (sizeof("Unexpected userinfo member \"\" for \"\"") + \
-                     64U + 8U)
+#define VEC_MSG_LEN   (256)
 
 typedef struct {
     char uri[64];
@@ -423,6 +422,27 @@ static const validate_t validate_uris[] = {
         "",
         "",
         0),
+    VEC("coap://example.com:1234568910",
+        /* is URI */
+        true,
+        /* parsed scheme */
+        "coap",
+        /* parsed userinfo */
+        "",
+        /* parsed host */
+        "example.com",
+        /* parsed host without zoneid */
+        "",
+        /* parsed zoneid */
+        "",
+        /* parsed port */
+        "",
+        /* parsed path */
+        "",
+        /* parsed query */
+        "",
+        /* expected return value */
+        -1),
 };
 
 static char _failure_msg[VEC_MSG_LEN];

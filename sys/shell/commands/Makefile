@@ -106,7 +106,7 @@ ifneq (,$(filter lwip_netif,$(USEMODULE)))
   SRC += sc_lwip_netif.c
 endif
 
-ifneq (,$(filter periph_rtc,$(USEMODULE)))
+ifneq (,$(filter rtt_rtc periph_rtc,$(USEMODULE)))
   SRC += sc_rtc.c
 endif
 
@@ -120,6 +120,10 @@ endif
 
 ifneq (,$(filter semtech-loramac,$(USEPKG)))
   SRC += sc_loramac.c
+endif
+
+ifneq (,$(filter nanocoap_vfs,$(USEMODULE)))
+  SRC += sc_nanocoap_vfs.c
 endif
 
 ifneq (,$(filter nimble_netif,$(USEMODULE)))
