@@ -93,9 +93,10 @@ static char *_get_component(int id)
     return NULL;
 }
 
-int _openwsn_ifconfig(char *arg)
+static int _openwsn_ifconfig(int argc, char **argv)
 {
-    (void)arg;
+    (void)argc;
+    (void)argv;
 
     open_addr_t *addr;
     /* Use shared buffer for IEEE802154_LONG_ADDRES and IPV6_ADDR str
@@ -185,6 +186,8 @@ int _openwsn_ifconfig(char *arg)
 
     return 0;
 }
+
+SHELL_COMMAND(ifconfig, "Shows assigned IPv6 addresses", _openwsn_ifconfig);
 
 static int _neighbors_cmd(char *arg)
 {
@@ -569,7 +572,7 @@ static void _print_usage(void)
 #endif
 }
 
-int _openwsn_handler(int argc, char **argv)
+static int _openwsn_handler(int argc, char **argv)
 {
     if (argc < 2) {
         _print_usage();
@@ -609,3 +612,5 @@ int _openwsn_handler(int argc, char **argv)
     _print_usage();
     return -1;
 }
+
+SHELL_COMMAND(openwsn, "OpenWSN commands", _openwsn_handler);

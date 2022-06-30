@@ -35,7 +35,7 @@ def detect_includes_and_version_gcc(compiler):
     except FileNotFoundError:
         msg = f"Compiler {compiler} not found, not adding system include paths\n"
         sys.stderr.write(msg)
-        return []
+        return ([], "")
 
     stderrdata = stderrdata.decode("utf-8")
     version = REGEX_VERSION.search(stderrdata).group(1)
@@ -318,11 +318,21 @@ if __name__ == '__main__':
     if _args.clangd:
         _args.add_built_in_includes = True
         _args.add_libstdcxx_includes = True
-        _args.filter_out = ['-mno-thumb-interwork',
-                            # Only even included for versions of GCC that support it
-                            '-misa-spec=2.2',
-                            '-malign-data=natural',
-                            # Only supported starting with clang 11
-                            '-msmall-data-limit=8',
-                            ]
+        flags = [
+            '-mno-thumb-interwork',
+            # Only even included for versions of GCC that
+            # support it
+            '-misa-spec=2.2',
+            '-malign-data=natural',
+            # Only supported starting with clang 11
+            '-msmall-data-limit=8',
+            # not supported by clang, see
+            # https://gcc.gnu.org/onlinedocs/gcc-10.2.0/gcc/Xtensa-Options.html
+            '-mtext-section-literals',
+            '-fstrict-volatile-bitfields',
+            # it's called -mlong-calls in LLVM, but we don't need it for clangd
+            # as we do not generate code anyway
+            '-mlongcalls',
+        ]
+        _args.filter_out.extend(flags)
     generate_compile_commands(_args)

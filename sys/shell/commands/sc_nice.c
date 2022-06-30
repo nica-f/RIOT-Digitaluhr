@@ -24,9 +24,10 @@
 #include <stdlib.h>
 
 #include "sched.h"
+#include "shell.h"
 #include "thread.h"
 
-int _sc_nice(int argc, char **argv)
+static int _sc_nice(int argc, char **argv)
 {
     if (argc != 3) {
         printf("Usage: %s <THREAD_ID> <PRIORITY>\n"
@@ -51,3 +52,5 @@ int _sc_nice(int argc, char **argv)
     sched_change_priority(thread, prio);
     return EXIT_SUCCESS;
 }
+
+SHELL_COMMAND(nice, "Change priority of an active thread", _sc_nice);

@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "net/gnrc/ipv6/whitelist.h"
+#include "shell.h"
 
 static void _usage(char *cmd)
 {
@@ -30,7 +31,7 @@ static void _usage(char *cmd)
     puts("         Print this.");
 }
 
-int _whitelist(int argc, char **argv)
+static int _whitelist(int argc, char **argv)
 {
     ipv6_addr_t addr;
     if (argc < 2) {
@@ -58,5 +59,7 @@ int _whitelist(int argc, char **argv)
     }
     return 0;
 }
+
+SHELL_COMMAND(whitelist, "whitelists an address for receival ('whitelist [add|del|help]')", _whitelist);
 
 /** @} */

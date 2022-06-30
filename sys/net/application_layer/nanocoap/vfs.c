@@ -19,7 +19,7 @@
  */
 
 #include <fcntl.h>
-#include "net/nanocoap_sock.h"
+#include "net/nanocoap_vfs.h"
 #include "net/sock/util.h"
 #include "vfs.h"
 
@@ -66,12 +66,12 @@ int nanocoap_vfs_get(nanocoap_sock_t *sock, const char *path, const char *dst)
     int fd, res;
     char dst_tmp[CONFIG_SOCK_URLPATH_MAXLEN];
 
-    DEBUG("nanocoap: downloading %s to %s\n", path, dst_tmp);
-
     fd = _prepare_file(dst, dst_tmp, sizeof(dst_tmp));
     if (fd < 0) {
         return fd;
     }
+
+    DEBUG("nanocoap: downloading %s to %s\n", path, dst_tmp);
     res = nanocoap_sock_get_blockwise(sock, path, CONFIG_NANOCOAP_BLOCKSIZE_DEFAULT,
                                       _2file, &fd);
     return _finalize_file(fd, res, dst, dst_tmp);
@@ -82,13 +82,78 @@ int nanocoap_vfs_get_url(const char *url, const char *dst)
     int fd, res;
     char dst_tmp[CONFIG_SOCK_URLPATH_MAXLEN];
 
-    DEBUG("nanocoap: downloading %s to %s\n", url, dst_tmp);
-
     fd = _prepare_file(dst, dst_tmp, sizeof(dst_tmp));
     if (fd < 0) {
         return fd;
     }
+
+    DEBUG("nanocoap: downloading %s to %s\n", url, dst_tmp);
     res = nanocoap_get_blockwise_url(url, CONFIG_NANOCOAP_BLOCKSIZE_DEFAULT,
                                      _2file, &fd);
     return _finalize_file(fd, res, dst, dst_tmp);
+}
+
+static int _vfs_put(coap_block_request_t *ctx, const char *file, void *buffer)
+{
+    int res, fd = vfs_open(file, O_RDONLY, 0644);
+    if (fd < 0) {
+        return fd;
+    }
+
+    /* buffer is at least one larger than SZX value */
+    int buffer_len = coap_szx2size(ctx->blksize) + 1;
+
+    bool more = true;
+    while (more && (res = vfs_read(fd, buffer, buffer_len)) > 0) {
+        more = res == buffer_len;
+        res = nanocoap_sock_block_request(ctx, buffer,
+                                          res, more, NULL, NULL);
+        if (res < 0) {
+            break;
+        }
+        vfs_lseek(fd, -1, SEEK_CUR);
+    }
+
+    nanocoap_block_request_done(ctx);
+
+    vfs_close(fd);
+    return res;
+}
+
+int nanocoap_vfs_put(nanocoap_sock_t *sock, const char *path, const char *src,
+                     void *work_buf, size_t work_buf_len)
+{
+    DEBUG("nanocoap: uploading %s to %s\n", src, path);
+
+    if (work_buf_len < coap_szx2size(0) + 1) {
+        return -ENOBUFS;
+    }
+
+    coap_block_request_t ctx = {
+        .path = path,
+        .method = COAP_METHOD_PUT,
+        .blksize = coap_size2szx(work_buf_len - 1),
+        .sock = *sock,
+    };
+
+    return _vfs_put(&ctx, src, work_buf);
+}
+
+int nanocoap_vfs_put_url(const char *url, const char *src,
+                         void *work_buf, size_t work_buf_len)
+{
+    DEBUG("nanocoap: uploading %s to %s\n", src, url);
+
+    if (work_buf_len < coap_szx2size(0) + 1) {
+        return -ENOBUFS;
+    }
+
+    coap_block_request_t ctx;
+    int res = nanocoap_block_request_init_url(&ctx, url, COAP_METHOD_PUT,
+                                              coap_size2szx(work_buf_len - 1));
+    if (res) {
+        return res;
+    }
+
+    return _vfs_put(&ctx, src, work_buf);
 }

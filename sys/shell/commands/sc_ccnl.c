@@ -20,11 +20,12 @@
 
 #include <string.h>
 
-#include "random.h"
-#include "sched.h"
-#include "net/gnrc/netif.h"
 #include "ccn-lite-riot.h"
 #include "ccnl-pkt-ndntlv.h"
+#include "net/gnrc/netif.h"
+#include "random.h"
+#include "sched.h"
+#include "shell.h"
 
 #define BUF_SIZE (64)
 
@@ -40,7 +41,7 @@ static void _open_usage(void)
     puts("ccnl <interface>");
 }
 
-int _ccnl_open(int argc, char **argv)
+static int _ccnl_open(int argc, char **argv)
 {
     /* check if already running */
     if (ccnl_relay.ifcount >= CCNL_MAX_INTERFACES) {
@@ -73,6 +74,8 @@ int _ccnl_open(int argc, char **argv)
     return 0;
 }
 
+SHELL_COMMAND(ccnl_open, "opens an interface or socket", _ccnl_open);
+
 static void _content_usage(char *argv)
 {
     printf("usage: %s [URI] [content]\n"
@@ -81,7 +84,7 @@ static void _content_usage(char *argv)
             argv, argv);
 }
 
-int _ccnl_content(int argc, char **argv)
+static int _ccnl_content(int argc, char **argv)
 {
     if (argc < 2) {
         ccnl_cs_dump(&ccnl_relay);
@@ -142,6 +145,9 @@ int _ccnl_content(int argc, char **argv)
     return 0;
 }
 
+SHELL_COMMAND(ccnl_cs, "shows CS or creates content and populates it",
+        _ccnl_content);
+
 static struct ccnl_face_s *_intern_face_get(char *addr_str)
 {
     /* initialize address with 0xFF for broadcast */
@@ -196,7 +202,7 @@ static void _interest_usage(char *arg)
             arg, arg);
 }
 
-int _ccnl_interest(int argc, char **argv)
+static int _ccnl_interest(int argc, char **argv)
 {
     if (argc < 2) {
         _interest_usage(argv[0]);
@@ -219,6 +225,8 @@ int _ccnl_interest(int argc, char **argv)
     return res;
 }
 
+SHELL_COMMAND(ccnl_int, "sends an interest", _ccnl_interest);
+
 static void _ccnl_fib_usage(char *argv)
 {
     printf("usage: %s [<action> <options>]\n"
@@ -233,7 +241,7 @@ static void _ccnl_fib_usage(char *argv)
             argv, argv, argv, argv, argv);
 }
 
-int _ccnl_fib(int argc, char **argv)
+static int _ccnl_fib(int argc, char **argv)
 {
     if (argc < 2) {
         ccnl_fib_show(&ccnl_relay);
@@ -272,3 +280,5 @@ int _ccnl_fib(int argc, char **argv)
     }
     return 0;
 }
+
+SHELL_COMMAND(ccnl_fib, "shows or modifies the CCN-Lite FIB", _ccnl_fib);

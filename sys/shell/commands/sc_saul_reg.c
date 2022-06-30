@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 #include "saul_reg.h"
+#include "shell.h"
 
 static const char *_devname(saul_reg_t *dev) {
     if (dev->name == NULL) {
@@ -144,7 +145,7 @@ static void write(int argc, char **argv)
     printf("data successfully written to device #%i\n", num);
 }
 
-int _saul(int argc, char **argv)
+static int _saul(int argc, char **argv)
 {
     if (argc < 2) {
         list();
@@ -162,3 +163,5 @@ int _saul(int argc, char **argv)
     }
     return 0;
 }
+
+SHELL_COMMAND(saul, "interact with sensors and actuators using SAUL", _saul);

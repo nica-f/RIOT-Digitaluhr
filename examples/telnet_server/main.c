@@ -21,34 +21,13 @@
 #include <stdio.h>
 
 #include "net/ipv6/addr.h"
-#include "net/gnrc.h"
-#include "net/gnrc/netif.h"
+#include "net/netif.h"
 #include "net/telnet.h"
 #include "shell.h"
 #include "msg.h"
 
 #define MAIN_QUEUE_SIZE     (8)
 static msg_t _main_msg_queue[MAIN_QUEUE_SIZE];
-
-static void _print_addr(void)
-{
-    gnrc_netif_t *netif = NULL;
-    while ((netif = gnrc_netif_iter(netif))) {
-        ipv6_addr_t ipv6_addrs[CONFIG_GNRC_NETIF_IPV6_ADDRS_NUMOF];
-        int res = gnrc_netapi_get(netif->pid, NETOPT_IPV6_ADDR, 0, ipv6_addrs,
-                                  sizeof(ipv6_addrs));
-
-        if (res < 0) {
-            continue;
-        }
-        for (unsigned i = 0; i < (unsigned)(res / sizeof(ipv6_addr_t)); i++) {
-            char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
-
-            ipv6_addr_to_str(ipv6_addr, &ipv6_addrs[i], IPV6_ADDR_MAX_STR_LEN);
-            printf("My address is %s\n", ipv6_addr);
-        }
-    }
-}
 
 static void _print_motd(void)
 {
@@ -71,10 +50,13 @@ void telnet_cb_pre_connected(sock_tcp_t *sock)
     printf("%s connected\n", addr_str);
 }
 
+/* shell lock module makes use of disconnect callback */
+#ifndef MODULE_SHELL_LOCK
 void telnet_cb_disconneced(void)
 {
     puts("disconnected");
 }
+#endif
 
 void telnet_cb_connected(sock_tcp_t *sock)
 {
@@ -90,8 +72,10 @@ int main(void)
 
     _print_motd();
 
-    /* print address so we can connect to it */
-    _print_addr();
+    /* print address(es) so we can connect to it */
+    printf("{\"IPv6 addresses\": [\"");
+    netifs_print_ipv6("\", \"");
+    puts("\"]}");
 
     /* start shell */
     printf("All up, awaiting connection on port %u\n", CONFIG_TELNET_PORT);

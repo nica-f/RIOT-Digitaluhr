@@ -19,11 +19,14 @@
  */
 
 #include "app_metadata.h"
+#include "shell.h"
 
-int _app_metadata_handler(int argc, char **argv)
+static int _app_metadata_handler(int argc, char **argv)
 {
     (void) argc;
     (void) argv;
     app_metadata_print_json();
     return 0;
 }
+
+SHELL_COMMAND(app_metadata, "Returns application metadata", _app_metadata_handler);

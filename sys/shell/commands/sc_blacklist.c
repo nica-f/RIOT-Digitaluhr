@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "net/gnrc/ipv6/blacklist.h"
+#include "shell.h"
 
 static void _usage(char *cmd)
 {
@@ -31,7 +32,7 @@ static void _usage(char *cmd)
     puts("         Print this.");
 }
 
-int _blacklist(int argc, char **argv)
+static int _blacklist(int argc, char **argv)
 {
     ipv6_addr_t addr;
     if (argc < 2) {
@@ -59,5 +60,9 @@ int _blacklist(int argc, char **argv)
     }
     return 0;
 }
+
+SHELL_COMMAND(blacklist,
+        "blacklists an address for receival ('blacklist [add|del|help]')",
+        _blacklist);
 
 /** @} */

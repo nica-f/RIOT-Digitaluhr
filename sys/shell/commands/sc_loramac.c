@@ -21,11 +21,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "shell.h"
 #include "fmt.h"
-
 #include "net/loramac.h"
 #include "semtech_loramac.h"
+#include "shell.h"
 
 extern semtech_loramac_t loramac;
 
@@ -67,7 +66,7 @@ static void _loramac_get_usage(void)
          "class|dr|adr|public|netid|tx_power|rx2_freq|rx2_dr|ul_cnt|ch_mask>");
 }
 
-int _loramac_handler(int argc, char **argv)
+static int _loramac_handler(int argc, char **argv)
 {
     if (argc < 2) {
         _loramac_usage();
@@ -512,3 +511,5 @@ int _loramac_handler(int argc, char **argv)
 
     return 0;
 }
+
+SHELL_COMMAND(loramac, "Control Semtech loramac stack", _loramac_handler);

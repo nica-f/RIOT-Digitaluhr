@@ -21,12 +21,13 @@
 #include <stdio.h>
 
 #include "periph/pm.h"
+#include "shell.h"
 
 #ifdef MODULE_USB_BOARD_RESET
 #include "usb_board_reset.h"
 #endif
 
-int _reboot_handler(int argc, char **argv)
+static int _reboot_handler(int argc, char **argv)
 {
     (void) argc;
     (void) argv;
@@ -36,8 +37,10 @@ int _reboot_handler(int argc, char **argv)
     return 0;
 }
 
+SHELL_COMMAND(reboot, "Reboot the node", _reboot_handler);
+
 #ifdef MODULE_USB_BOARD_RESET
-int _bootloader_handler(int argc, char **argv)
+static int _bootloader_handler(int argc, char **argv)
 {
     (void) argc;
     (void) argv;
@@ -46,9 +49,11 @@ int _bootloader_handler(int argc, char **argv)
 
     return 0;
 }
+
+SHELL_COMMAND(bootloader, "Reboot to bootloader", _bootloader_handler);
 #endif
 
-int _version_handler(int argc, char **argv)
+static int _version_handler(int argc, char **argv)
 {
     (void) argc;
     (void) argv;
@@ -57,3 +62,5 @@ int _version_handler(int argc, char **argv)
 
     return 0;
 }
+
+SHELL_COMMAND(version, "Prints current RIOT_VERSION", _version_handler);

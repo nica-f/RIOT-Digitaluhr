@@ -21,11 +21,12 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "net/sntp.h"
-#include "net/ntp_packet.h"
 #include "net/af.h"
 #include "net/gnrc/netif.h"
 #include "net/ipv6/addr.h"
+#include "net/ntp_packet.h"
+#include "net/sntp.h"
+#include "shell.h"
 #include "timex.h"
 
 #define _DEFAULT_TIMEOUT (500000LU)
@@ -36,7 +37,7 @@ static void _usage(char *cmd)
     printf("default: timeout = %lu\n", _DEFAULT_TIMEOUT);
 }
 
-int _ntpdate(int argc, char **argv)
+static int _ntpdate(int argc, char **argv)
 {
     uint32_t timeout = _DEFAULT_TIMEOUT;
 
@@ -101,3 +102,5 @@ int _ntpdate(int argc, char **argv)
 #endif
     return 0;
 }
+
+SHELL_COMMAND(ntpdate, "synchronizes with a remote time server", _ntpdate);

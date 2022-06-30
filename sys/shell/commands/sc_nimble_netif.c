@@ -24,12 +24,13 @@
 #include <stdbool.h>
 
 #include "fmt.h"
-#include "ztimer.h"
-#include "nimble_riot.h"
-#include "nimble_netif.h"
-#include "nimble_netif_conn.h"
 #include "net/bluetil/ad.h"
 #include "net/bluetil/addr.h"
+#include "nimble_netif.h"
+#include "nimble_netif_conn.h"
+#include "nimble_riot.h"
+#include "shell.h"
+#include "ztimer.h"
 
 #define FULL_CONTROL            !IS_USED(MODULE_NIMBLE_AUTOCONN) && \
                                 !IS_USED(MODULE_NIMBLE_STATCONN) && \
@@ -514,7 +515,7 @@ void sc_nimble_netif_init(void)
 #endif
 }
 
-int _nimble_netif_handler(int argc, char **argv)
+static int _nimble_netif_handler(int argc, char **argv)
 {
     if ((argc == 1) || _ishelp(argv[1])) {
 #if FULL_CONTROL
@@ -627,3 +628,5 @@ int _nimble_netif_handler(int argc, char **argv)
 
     return 0;
 }
+
+SHELL_COMMAND(ble, "Manage BLE connections for NimBLE", _nimble_netif_handler);

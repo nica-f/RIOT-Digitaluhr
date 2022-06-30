@@ -24,7 +24,7 @@
 static const char *bench_server = BENCH_SERVER_DEFAULT;
 static uint16_t bench_port = BENCH_PORT_DEFAULT;
 
-int _benchmark_udp_handler(int argc, char **argv)
+static int _benchmark_udp_handler(int argc, char **argv)
 {
     if (argc < 2) {
         goto usage;
@@ -63,4 +63,6 @@ usage:
     printf("usage: %s [start|stop|config] <server> <port>\n", argv[0]);
     return -1;
 }
+
+SHELL_COMMAND(bench_udp, "UDP benchmark", _benchmark_udp_handler);
 /** @} */

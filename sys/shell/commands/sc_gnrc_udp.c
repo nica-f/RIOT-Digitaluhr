@@ -26,9 +26,10 @@
 #include "net/gnrc/ipv6.h"
 #include "net/gnrc/netif.h"
 #include "net/gnrc/netif/hdr.h"
-#include "net/gnrc/udp.h"
 #include "net/gnrc/pktdump.h"
+#include "net/gnrc/udp.h"
 #include "net/utils.h"
+#include "shell.h"
 #include "timex.h"
 #include "utlist.h"
 #if IS_USED(MODULE_ZTIMER_USEC) || IS_USED(MODULE_ZTIMER_MSEC)
@@ -154,7 +155,7 @@ static void _stop_server(void)
     puts("Success: stopped UDP server");
 }
 
-int _gnrc_udp_cmd(int argc, char **argv)
+static int _gnrc_udp_cmd(int argc, char **argv)
 {
     if (argc < 2) {
         printf("usage: %s [send|server]\n", argv[0]);
@@ -203,3 +204,5 @@ int _gnrc_udp_cmd(int argc, char **argv)
     }
     return 0;
 }
+
+SHELL_COMMAND(udp, "send data over UDP and listen on UDP ports", _gnrc_udp_cmd);

@@ -22,14 +22,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
 #include "at30tse75x.h"
+#include "shell.h"
 
 #ifdef MODULE_AT30TSE75X
 
 static bool initialized = false;
 static at30tse75x_t dev;
 
-int _at30tse75x_handler(int argc, char **argv)
+static int _at30tse75x_handler(int argc, char **argv)
 {
     if(argc <= 1) {
         printf("Usage: %s init|read|mode|resolution|save|restore|config\n", argv[0]);
@@ -156,5 +158,7 @@ int _at30tse75x_handler(int argc, char **argv)
     }
     return 0;
 }
+
+SHELL_COMMAND(at30tse75x, "Test AT30TSE75X temperature sensor", _at30tse75x_handler);
 
 #endif /* MODULE_AT30TSE75X */

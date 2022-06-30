@@ -24,14 +24,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "net/netif.h"
-#include "net/ipv6/addr.h"
+#include "fmt.h"
 #include "net/gnrc.h"
 #include "net/gnrc/netif.h"
 #include "net/gnrc/netif/hdr.h"
+#include "net/ipv6/addr.h"
 #include "net/lora.h"
 #include "net/loramac.h"
-#include "fmt.h"
+#include "net/netif.h"
+#include "shell.h"
 
 #ifdef MODULE_NETSTATS
 #include "net/netstats.h"
@@ -151,16 +152,18 @@ static const char *_netstats_module_to_str(uint8_t module)
 
 static int _netif_stats(netif_t *iface, unsigned module, bool reset)
 {
-    netstats_t *stats;
+    netstats_t stats;
     int res = netif_get_opt(iface, NETOPT_STATS, module, &stats,
-                            sizeof(&stats));
+                            sizeof(stats));
 
     if (res < 0) {
         puts("           Protocol or device doesn't provide statistics.");
     }
     else if (reset) {
-        memset(stats, 0, sizeof(netstats_t));
-        printf("Reset statistics for module %s!\n", _netstats_module_to_str(module));
+        res = netif_set_opt(iface, NETOPT_STATS, module, NULL, 0);
+        printf("Reset statistics for module %s: %s!\n",
+               _netstats_module_to_str(module),
+               (res < 0) ? "failed" : "succeeded");
     }
     else {
         printf("          Statistics for %s\n"
@@ -168,13 +171,13 @@ static int _netif_stats(netif_t *iface, unsigned module, bool reset)
                "            TX packets %u (Multicast: %u)  bytes %u\n"
                "            TX succeeded %u errors %u\n",
                _netstats_module_to_str(module),
-               (unsigned) stats->rx_count,
-               (unsigned) stats->rx_bytes,
-               (unsigned) (stats->tx_unicast_count + stats->tx_mcast_count),
-               (unsigned) stats->tx_mcast_count,
-               (unsigned) stats->tx_bytes,
-               (unsigned) stats->tx_success,
-               (unsigned) stats->tx_failed);
+               (unsigned)stats.rx_count,
+               (unsigned)stats.rx_bytes,
+               (unsigned)(stats.tx_unicast_count + stats.tx_mcast_count),
+               (unsigned)stats.tx_mcast_count,
+               (unsigned)stats.tx_bytes,
+               (unsigned)stats.tx_success,
+               (unsigned)stats.tx_failed);
         res = 0;
     }
     return res;
@@ -1724,7 +1727,7 @@ static int _netif_del(netif_t *iface, char *addr_str)
 
 /* shell commands */
 #ifdef MODULE_GNRC_TXTSND
-int _gnrc_netif_send(int argc, char **argv)
+static int _gnrc_netif_send(int argc, char **argv)
 {
     netif_t *iface;
     uint8_t addr[GNRC_NETIF_L2ADDR_MAXLEN];
@@ -1781,15 +1784,29 @@ int _gnrc_netif_send(int argc, char **argv)
 
     return 0;
 }
+
+SHELL_COMMAND(txtsnd, "Sends a custom string as is over the link layer", _gnrc_netif_send);
 #endif
 
+/* TODO: updated tests/gnrc_dhcpv6_client to no longer abuse this shell command
+ * and add static qualifier */
 int _gnrc_netif_config(int argc, char **argv)
 {
     if (argc < 2) {
-        netif_t *netif = NULL;
+        netif_t *last = NULL;
 
-        while ((netif = netif_iter(netif))) {
+        /* Get interfaces in reverse order since the list is used like a stack.
+         * Stop when first netif in list already has been listed. */
+        while (last != netif_iter(NULL)) {
+            netif_t *netif = NULL;
+            netif_t *next = netif_iter(netif);
+            /* Step until next is end of list or was previously listed. */
+            do {
+                netif = next;
+                next = netif_iter(netif);
+            } while (next && next != last);
             _netif_list(netif);
+            last = netif;
         }
 
         return 0;
@@ -1905,3 +1922,5 @@ int _gnrc_netif_config(int argc, char **argv)
     _usage(argv[0]);
     return 1;
 }
+
+SHELL_COMMAND(ifconfig, "Configure network interfaces", _gnrc_netif_config);

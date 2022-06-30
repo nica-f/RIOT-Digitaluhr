@@ -20,7 +20,10 @@ ifeq (,$(filter stdio_% slipdev_stdio,$(USEMODULE)))
   USEMODULE += stdio_uart
 endif
 
-USEMODULE += xtensa
+ifeq (xtensa,$(CPU_ARCH))
+  USEMODULE += esp_xtensa
+  USEMODULE += xtensa
+endif
 
 # Features used by ESP*
 
@@ -92,4 +95,10 @@ endif
 ifneq (,$(filter esp_wifi_any,$(USEMODULE)))
   USEMODULE += netopt
   USEMODULE += ztimer_msec
+endif
+
+ifneq (,$(filter esp_freertos_common,$(USEMODULE)))
+  ifneq (,$(filter ztimer_msec,$(USEMODULE)))
+    USEMODULE += core_thread_flags
+  endif
 endif

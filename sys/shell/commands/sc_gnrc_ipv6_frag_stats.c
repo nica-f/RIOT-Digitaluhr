@@ -14,9 +14,11 @@
  */
 
 #include <stdio.h>
-#include "net/gnrc/ipv6/ext/frag.h"
 
-int _gnrc_ipv6_frag_stats(int argc, char **argv)
+#include "net/gnrc/ipv6/ext/frag.h"
+#include "shell.h"
+
+static int _gnrc_ipv6_frag_stats(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
@@ -30,5 +32,7 @@ int _gnrc_ipv6_frag_stats(int argc, char **argv)
     }
     return 0;
 }
+
+SHELL_COMMAND(ip6_frag, "IPv6 fragmentation statistics", _gnrc_ipv6_frag_stats);
 
 /** @} */

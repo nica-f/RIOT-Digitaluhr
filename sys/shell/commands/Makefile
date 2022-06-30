@@ -1,6 +1,6 @@
 MODULE = shell_commands
 
-SRC = shell_commands.c sc_sys.c
+SRC = sc_sys.c
 
 ifneq (,$(filter app_metadata,$(USEMODULE)))
   SRC += sc_app_metadata.c
@@ -134,7 +134,7 @@ ifneq (,$(filter nimble_statconn,$(USEMODULE)))
   SRC += sc_nimble_statconn.c
 endif
 
-ifneq (,$(filter suit_transport_coap,$(USEMODULE)))
+ifneq (,$(filter suit_transport_worker,$(USEMODULE)))
   SRC += sc_suit.c
 endif
 

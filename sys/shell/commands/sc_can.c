@@ -25,7 +25,7 @@
 
 #include "can/conn/raw.h"
 #include "can/raw.h"
-
+#include "shell.h"
 #include "timex.h"
 
 #define SC_CAN_MAX_FILTERS  10
@@ -162,7 +162,7 @@ static int _can_usage(void)
     return 0;
 }
 
-int _can_handler(int argc, char **argv)
+static int _can_handler(int argc, char **argv)
 {
     if (argc < 2) {
         _can_usage();
@@ -183,3 +183,5 @@ int _can_handler(int argc, char **argv)
     }
     return 0;
 }
+
+SHELL_COMMAND(can, "CAN commands", _can_handler);

@@ -97,6 +97,10 @@ ifneq (,$(filter trace,$(USEMODULE)))
   USEMODULE += ztimer_usec
 endif
 
+ifneq (,$(filter shell_lock,$(USEMODULE)))
+  USEMODULE += ztimer_msec
+endif
+
 ifneq (,$(filter ssp,$(USEMODULE)))
   FEATURES_REQUIRED += ssp
 endif
@@ -846,12 +850,17 @@ endif
 
 ifneq (,$(filter suit_transport_%, $(USEMODULE)))
   USEMODULE += suit_transport
+  USEMODULE += suit_transport_worker
 endif
 
 ifneq (,$(filter suit_transport_coap, $(USEMODULE)))
   USEMODULE += nanocoap_sock
   USEMODULE += ztimer_msec
   USEMODULE += sock_util
+endif
+
+ifneq (,$(filter suit_transport_vfs, $(USEMODULE)))
+  USEMODULE += vfs_util
 endif
 
 ifneq (,$(filter suit_storage_%, $(USEMODULE)))
@@ -863,6 +872,11 @@ ifneq (,$(filter suit_storage_flashwrite, $(USEMODULE)))
   USEMODULE += riotboot_slot
   USEMODULE += riotboot_flashwrite
   USEMODULE += riotboot_flashwrite_verify_sha256
+endif
+
+ifneq (,$(filter suit_storage_vfs,$(USEMODULE)))
+  USEMODULE += vfs
+  USEMODULE += mtd
 endif
 
 ifneq (,$(filter suit_%,$(USEMODULE)))

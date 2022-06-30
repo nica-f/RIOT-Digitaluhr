@@ -173,8 +173,11 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
             /* fall-through */
         case STATE_RESPONSE_RCVD:
         case STATE_RESPONSE_OK:
-            DEBUG("nanocoap: waiting for response (timeout: %"PRIu32" µs)\n",
-                  _deadline_left_us(deadline));
+            if (ctx == NULL) {
+                DEBUG("nanocoap: waiting for response (timeout: %"PRIu32" µs)\n",
+                      _deadline_left_us(deadline));
+            }
+            const void *old_ctx = ctx;
             tmp = sock_udp_recv_buf(sock, &payload, &ctx, _deadline_left_us(deadline), NULL);
             /* sock_udp_recv_buf() is supposed to return multiple packet fragments
              * when called multiple times with the same context.
@@ -183,7 +186,7 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
              * releases the packet.
              * This assertion will trigger should the behavior change in the future.
              */
-            if (state != STATE_REQUEST_SEND) {
+            if (old_ctx) {
                 assert(tmp == 0 && ctx == NULL);
             }
             if (tmp == 0) {
@@ -197,7 +200,7 @@ ssize_t nanocoap_sock_request_cb(nanocoap_sock_t *sock, coap_pkt_t *pkt,
             }
             res = tmp;
             if (res == -ETIMEDOUT) {
-                DEBUG("nanocoap: timeout\n");
+                DEBUG("nanocoap: timeout, %u retries left\n", tries_left - 1);
                 timeout *= 2;
                 deadline = _deadline_from_interval(timeout);
                 state = STATE_REQUEST_SEND;

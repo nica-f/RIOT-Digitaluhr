@@ -38,6 +38,9 @@ int mtd_init(mtd_dev_t *mtd)
 
     if (mtd->driver->init) {
         res = mtd->driver->init(mtd);
+        if (res < 0) {
+            return res;
+        }
     }
 
     /* Drivers preceding the introduction of write_size need to set it. While
@@ -103,6 +106,7 @@ int mtd_read_page(mtd_dev_t *mtd, void *dest, uint32_t page, uint32_t offset,
     const uint32_t page_shift = bitarithm_msb(mtd->page_size);
     const uint32_t page_mask = mtd->page_size - 1;
 
+    /* ensure offset is within a page */
     page  += offset >> page_shift;
     offset = offset & page_mask;
 
@@ -261,6 +265,7 @@ int mtd_write_page_raw(mtd_dev_t *mtd, const void *src, uint32_t page, uint32_t 
     const uint32_t page_shift = bitarithm_msb(mtd->page_size);
     const uint32_t page_mask = mtd->page_size - 1;
 
+    /* ensure offset is within a page */
     page  += offset >> page_shift;
     offset = offset & page_mask;
 
