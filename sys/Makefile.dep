@@ -173,6 +173,7 @@ endif
 
 ifneq (,$(filter netdev_ieee802154_submac,$(USEMODULE)))
   USEMODULE += netdev_ieee802154
+  USEMODULE += netdev_legacy_api
   USEMODULE += ieee802154
   USEMODULE += ieee802154_submac
 endif
@@ -315,7 +316,7 @@ ifneq (,$(filter shell_commands,$(USEMODULE)))
   endif
 
   ifneq (,$(filter gnrc_icmpv6_echo,$(USEMODULE)))
-    USEMODULE += netutils
+    USEMODULE += netutils ztimer_usec
   endif
 
   ifneq (,$(gnrc_udp_cmd,$(USEMODULE)))
@@ -336,6 +337,11 @@ ifneq (,$(filter shell_commands,$(USEMODULE)))
   ifneq (,$(filter gnrc_lorawan,$(USEMODULE)))
     USEMODULE += gnrc_netif_cmd_lora
   endif
+endif
+
+ifneq (,$(filter shell_democommands,$(USEMODULE)))
+  USEMODULE += rust_riotmodules
+  USEMODULE += shell
 endif
 
 ifneq (,$(filter md5sum sha1sum sha256sum,$(USEMODULE)))
@@ -597,6 +603,24 @@ ifneq (,$(filter sock_dns,$(USEMODULE)))
   USEMODULE += posix_headers
 endif
 
+ifneq (,$(filter sock_dns_mock,$(USEMODULE)))
+  USEMODULE += dns
+endif
+
+ifneq (,$(filter sock_dodtls,$(USEMODULE)))
+  USEMODULE += dns_msg
+  USEMODULE += sock_dtls
+  USEMODULE += sock_udp
+  USEMODULE += sock_util
+  USEMODULE += posix_headers
+  USEMODULE += ztimer_msec
+endif
+
+ifneq (,$(filter dns_cache,$(USEMODULE)))
+  USEMODULE += ztimer_msec
+  USEMODULE += checksum
+endif
+
 ifneq (,$(filter sock_util,$(USEMODULE)))
   USEMODULE += posix_inet
   USEMODULE += fmt
@@ -631,6 +655,15 @@ ifneq (,$(filter gcoap_fileserver,$(USEMODULE)))
   USEMODULE += gcoap
   USEMODULE += checksum
   USEMODULE += vfs
+endif
+
+ifneq (,$(filter gcoap_fileserver_delete,$(USEMODULE)))
+  USEMODULE += gcoap_fileserver
+  USEMODULE += vfs_util
+endif
+
+ifneq (,$(filter gcoap_fileserver_put,$(USEMODULE)))
+  USEMODULE += gcoap_fileserver
 endif
 
 ifneq (,$(filter gcoap_forward_proxy,$(USEMODULE)))
@@ -669,6 +702,15 @@ ifneq (,$(filter gcoap,$(USEMODULE)))
   USEMODULE += event_callback
   USEMODULE += event_timeout_ztimer
   USEMODULE += random
+endif
+
+ifneq (,$(filter gcoap_dns,$(USEMODULE)))
+  USEMODULE += dns_msg
+  USEMODULE += gcoap
+  USEMODULE += ipv4_addr
+  USEMODULE += ipv6_addr
+  USEMODULE += uri_parser
+  USEMODULE += sock_util
 endif
 
 ifneq (,$(filter luid,$(USEMODULE)))
@@ -921,6 +963,10 @@ ifneq (,$(filter ecc_%,$(USEMODULE)))
   USEMODULE += ecc
 endif
 
+ifneq (,$(filter bhp_%,$(USEMODULE)))
+  USEMODULE += bhp
+endif
+
 ifneq (,$(filter dbgpin,$(USEMODULE)))
   FEATURES_REQUIRED += periph_gpio
   FEATURES_REQUIRED += dbgpin
@@ -954,6 +1000,10 @@ ifneq (,$(filter fido2_ctap,$(USEMODULE)))
   USEMODULE += crypto_aes_256
   USEMODULE += hashes
   USEMODULE += fido2
+endif
+
+ifneq (,$(filter rust_riotmodules,$(USEMODULE)))
+  include $(RIOTBASE)/sys/rust_riotmodules/Makefile.dep
 endif
 
 include $(RIOTBASE)/sys/test_utils/Makefile.dep

@@ -28,6 +28,8 @@
 #include "assert.h"
 #include "net/coap.h"
 #include "net/gcoap.h"
+#include "net/gcoap/forward_proxy.h"
+#include "nanocoap_internal.h"
 #include "net/nanocoap/cache.h"
 #include "net/sock/async/event.h"
 #include "net/sock/util.h"
@@ -41,8 +43,6 @@
 #include "net/credman.h"
 #include "net/dsm.h"
 #endif
-
-#include "net/gcoap/forward_proxy.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -63,7 +63,8 @@ static ssize_t _tl_send(gcoap_socket_t *sock, const void *data, size_t len,
                         const sock_udp_ep_t *remote, sock_udp_aux_tx_t *aux);
 static ssize_t _tl_authenticate(gcoap_socket_t *sock, const sock_udp_ep_t *remote,
                                 uint32_t timeout);
-static ssize_t _well_known_core_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx);
+static ssize_t _well_known_core_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len,
+                                        coap_request_ctx_t *ctx);
 static void _cease_retransmission(gcoap_request_memo_t *memo);
 static size_t _handle_req(gcoap_socket_t *sock, coap_pkt_t *pdu, uint8_t *buf,
                           size_t len, sock_udp_ep_t *remote);
@@ -380,6 +381,15 @@ static void _process_coap_pdu(gcoap_socket_t *sock, sock_udp_ep_t *remote, sock_
         return;
     }
 
+    if (coap_get_type(&pdu) == COAP_TYPE_RST) {
+        DEBUG("gcoap: received RST, expiring potentially existing memo\n");
+        _find_req_memo(&memo, &pdu, remote, true);
+        if (memo) {
+            event_timeout_clear(&memo->resp_evt_tmout);
+            _expire_request(memo);
+        }
+    }
+
     /* validate class and type for incoming */
     switch (coap_get_code_class(&pdu)) {
     /* incoming request or empty */
@@ -486,6 +496,13 @@ static void _process_coap_pdu(gcoap_socket_t *sock, sock_udp_ep_t *remote, sock_
         }
         else {
             DEBUG("gcoap: msg not found for ID: %u\n", coap_get_id(&pdu));
+            if (coap_get_type(&pdu) == COAP_TYPE_CON) {
+                /* we might run into this if an ACK to a sender got lost
+                 * see https://datatracker.ietf.org/doc/html/rfc7252#section-5.3.2 */
+                messagelayer_emptyresponse_type = COAP_TYPE_RST;
+                DEBUG("gcoap: Answering unknown CON response with RST to "
+                      "shut up sender\n");
+            }
         }
         break;
     default:
@@ -571,6 +588,11 @@ static void _on_resp_timeout(void *arg) {
  */
 static void _cease_retransmission(gcoap_request_memo_t *memo) {
     memo->state = GCOAP_MEMO_WAIT;
+    /* there is also no response handler to wait for => expire memo */
+    if (memo->resp_handler == NULL) {
+        event_timeout_clear(&memo->resp_evt_tmout);
+        _expire_request(memo);
+    }
 }
 
 /*
@@ -683,18 +705,22 @@ static size_t _handle_req(gcoap_socket_t *sock, coap_pkt_t *pdu, uint8_t *buf,
         return -1;
     }
 
-    pdu->tl_type = (uint32_t)sock->type;
-
     ssize_t pdu_len;
     char *offset;
 
+    coap_request_ctx_t ctx = {
+        .resource = resource,
+        .tl_type = (uint32_t)sock->type,
+    };
+
     if (coap_get_proxy_uri(pdu, &offset) > 0) {
-        pdu_len = resource->handler(pdu, buf, len, remote);
+        ctx.context = remote;
     }
     else {
-        pdu_len = resource->handler(pdu, buf, len, resource->context);
+        ctx.context = resource->context;
     }
 
+    pdu_len = resource->handler(pdu, buf, len, &ctx);
     if (pdu_len < 0) {
         pdu_len = gcoap_response(pdu, buf, len,
                                  COAP_CODE_INTERNAL_SERVER_ERROR);
@@ -811,6 +837,12 @@ static int _find_resource(gcoap_socket_type_t tl_type,
     return ret;
 }
 
+static bool _memo_ep_is_multicast(const gcoap_request_memo_t *memo)
+{
+    return memo->remote_ep.family == AF_INET6 &&
+           ipv6_addr_is_multicast((const ipv6_addr_t *)&memo->remote_ep.addr.ipv6);
+}
+
 /*
  * Finds the memo for an outstanding request within the _coap_state.open_reqs
  * array. Matches on remote endpoint and token.
@@ -846,7 +878,10 @@ static void _find_req_memo(gcoap_request_memo_t **memo_ptr, coap_pkt_t *src_pdu,
         } else if (coap_get_token_len(memo_pdu) == cmplen) {
             memo_pdu->token = coap_hdr_data_ptr(memo_pdu->hdr);
             if ((memcmp(coap_get_token(src_pdu), memo_pdu->token, cmplen) == 0)
-                    && sock_udp_ep_equal(&memo->remote_ep, remote)) {
+                    && (sock_udp_ep_equal(&memo->remote_ep, remote)
+                      /* Multicast addresses are not considered in matching responses */
+                      || _memo_ep_is_multicast(memo)
+                    )) {
                 *memo_ptr = memo;
                 break;
             }
@@ -883,7 +918,7 @@ static void _expire_request(gcoap_request_memo_t *memo)
  * /.well-known/core itself.
  */
 static ssize_t _well_known_core_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len,
-                                        void *ctx)
+                                        coap_request_ctx_t *ctx)
 {
     (void)ctx;
 
@@ -893,7 +928,7 @@ static ssize_t _well_known_core_handler(coap_pkt_t* pdu, uint8_t *buf, size_t le
 
     plen += gcoap_get_resource_list_tl(pdu->payload, (size_t)pdu->payload_len,
                                        COAP_FORMAT_LINK,
-                                       (gcoap_socket_type_t)pdu->tl_type);
+                                       (gcoap_socket_type_t)coap_request_ctx_get_tl_type(ctx));
     return plen;
 }
 

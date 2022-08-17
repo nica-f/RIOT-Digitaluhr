@@ -31,8 +31,10 @@
 
 #include "shell.h"
 #include "vfs.h"
-#if MODULE_VFS_UTIL
 #include "vfs_util.h"
+
+#ifndef SHELL_VFS_PATH_SIZE_MAX
+#define SHELL_VFS_PATH_SIZE_MAX 256
 #endif
 
 #define SHELL_VFS_BUFSIZE 256
@@ -62,7 +64,11 @@ static void _vfs_usage(char **argv)
     printf("%s cp <src> <dest>\n", argv[0]);
     printf("%s mv <src> <dest>\n", argv[0]);
     printf("%s mkdir <path> \n", argv[0]);
-    printf("%s rm <file>\n", argv[0]);
+    printf("%s rm"
+#if IS_USED(MODULE_VFS_UTIL)
+               " [-r]"
+#endif
+           " <path>\n", argv[0]);
     printf("%s df [path]\n", argv[0]);
     if (MOUNTPOINTS_NUMOF > 0) {
         printf("%s mount [path]\n", argv[0]);
@@ -73,13 +79,16 @@ static void _vfs_usage(char **argv)
     if (MOUNTPOINTS_NUMOF > 0) {
         printf("%s remount [path]\n", argv[0]);
     }
+    if (MOUNTPOINTS_NUMOF > 0) {
+        printf("%s format [path]\n", argv[0]);
+    }
     puts("r: Read [bytes] bytes at [offset] in file <path>");
     puts("w: Write (<a>: append, <o> overwrite) <ascii> or <hex> string <data> in file <path>");
     puts("ls: List files in <path>");
     puts("mv: Move <src> file to <dest>");
     puts("mkdir: Create directory <path> ");
     puts("cp: Copy <src> file to <dest>");
-    puts("rm: Unlink (delete) <file>");
+    puts("rm: Unlink (delete) a file or a directory at <path>");
     puts("df: Show file system space utilization stats");
 }
 
@@ -106,6 +115,7 @@ static int _errno_string(int err, char *buf, size_t buflen)
         err = -err;
     }
     switch (err) {
+        _case_snprintf_errno_name(EBUSY);
         _case_snprintf_errno_name(EACCES);
         _case_snprintf_errno_name(ENOENT);
         _case_snprintf_errno_name(EINVAL);
@@ -179,9 +189,13 @@ static int _mount_handler(int argc, char **argv)
         return -1;
     }
 
-    uint8_t buf[16];
+    char buf[16];
     int res = vfs_mount_by_path(argv[1]);
-    _errno_string(res, (char *)buf, sizeof(buf));
+    if (res < 0) {
+        _errno_string(res, buf, sizeof(buf));
+        puts(buf);
+    }
+
     return res;
 }
 
@@ -193,10 +207,13 @@ static int _umount_handler(int argc, char **argv)
         return -1;
     }
 
-    uint8_t buf[16];
+    char buf[16];
     int res = vfs_unmount_by_path(argv[1]);
+    if (res < 0) {
+        _errno_string(res, buf, sizeof(buf));
+        puts(buf);
+    }
 
-    _errno_string(res, (char *)buf, sizeof(buf));
     return res;
 }
 
@@ -208,10 +225,32 @@ static int _remount_handler(int argc, char **argv)
         return -1;
     }
 
-    uint8_t buf[16];
+    char buf[16];
     vfs_unmount_by_path(argv[1]);
     int res = vfs_mount_by_path(argv[1]);
-    _errno_string(res, (char *)buf, sizeof(buf));
+    if (res < 0) {
+        _errno_string(res, buf, sizeof(buf));
+        puts(buf);
+    }
+
+    return res;
+}
+
+static int _format_handler(int argc, char **argv)
+{
+    if (argc < 2) {
+        printf("usage: %s [path]\n", argv[0]);
+        puts("format pre-configured mount point");
+        return -1;
+    }
+
+    char buf[16];
+    int res = vfs_format_by_path(argv[1]);
+    if (res < 0) {
+        _errno_string(res, buf, sizeof(buf));
+        puts(buf);
+    }
+
     return res;
 }
 
@@ -558,10 +597,21 @@ static int _rm_handler(int argc, char **argv)
         _vfs_usage(argv);
         return 1;
     }
-    char *rm_name = argv[1];
+    bool recursive = !strcmp(argv[1], "-r");
+    if (recursive && (argc < 3 || !IS_USED(MODULE_VFS_UTIL))) {
+        _vfs_usage(argv);
+        return 1;
+    }
+    char *rm_name = recursive ? argv[2] : argv[1];
     printf("%s: unlink: %s\n", argv[0], rm_name);
-
-    int res = vfs_unlink(rm_name);
+    int res;
+    if (IS_USED(MODULE_VFS_UTIL) && recursive) {
+        char pbuf[SHELL_VFS_PATH_SIZE_MAX];
+        res = vfs_unlink_recursive(rm_name, pbuf, sizeof(pbuf));
+    }
+    else {
+        res = vfs_unlink(rm_name);
+    }
     if (res < 0) {
         char errbuf[16];
         _errno_string(res, (char *)errbuf, sizeof(errbuf));
@@ -701,6 +751,9 @@ static int _vfs_handler(int argc, char **argv)
     }
     else if (MOUNTPOINTS_NUMOF > 0 && strcmp(argv[1], "remount") == 0) {
         return _remount_handler(argc - 1, &argv[1]);
+    }
+    else if (MOUNTPOINTS_NUMOF > 0 && strcmp(argv[1], "format") == 0) {
+        return _format_handler(argc - 1, &argv[1]);
     }
     else {
         printf("vfs: unsupported sub-command \"%s\"\n", argv[1]);

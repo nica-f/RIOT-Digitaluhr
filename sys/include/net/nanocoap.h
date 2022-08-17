@@ -230,15 +230,18 @@ typedef struct {
     BITFIELD(opt_crit, CONFIG_NANOCOAP_NOPTS_MAX);    /**< unhandled critical option */
 #ifdef MODULE_GCOAP
     uint32_t observe_value;                           /**< observe value           */
-    /**
-     * @brief   transport the packet was received over
-     * @see     @ref gcoap_socket_type_t for values.
-     * @note    @ref gcoap_socket_type_t can not be used, as this would
-     *          cyclically include the @ref net_gcoap header.
-     */
-    uint32_t tl_type;
 #endif
 } coap_pkt_t;
+
+/**
+ * @brief   Forward declaration of internal CoAP resource request handler context
+ */
+struct _coap_request_ctx;
+
+/**
+ * @brief   CoAP resource request handler context
+ */
+typedef struct _coap_request_ctx coap_request_ctx_t;
 
 /**
  * @brief   Resource handler type
@@ -253,8 +256,17 @@ typedef struct {
  *
  * For POST, PATCH and other non-idempotent methods, this is an additional
  * requirement introduced by the contract of this type.
+ *
+ * @param[in]  pkt      The request packet
+ * @param[out] buf      Buffer for the response
+ * @param[in]  len      Size of the response buffer
+ * @param[in]  context  Request context
+ *
+ * @return     Number of response bytes written on success
+ *             Negative error on failure
  */
-typedef ssize_t (*coap_handler_t)(coap_pkt_t *pkt, uint8_t *buf, size_t len, void *context);
+typedef ssize_t (*coap_handler_t)(coap_pkt_t *pkt, uint8_t *buf, size_t len,
+                                  coap_request_ctx_t *context);
 
 /**
  * @brief   Coap blockwise request callback descriptor
@@ -306,6 +318,34 @@ typedef const struct {
     const coap_resource_t *resources;   /**< ptr to resource array  */
     const size_t resources_numof;       /**< number of entries in array */
 } coap_resource_subtree_t;
+
+/**
+ * @brief   Get resource path associated with a CoAP request
+ *
+ * @param[in]   ctx The request context
+ *
+ * @return  Resource path of the request
+ */
+const char *coap_request_ctx_get_path(const coap_request_ctx_t *ctx);
+
+/**
+ * @brief   Get resource context associated with a CoAP request
+ *
+ * @param[in]   ctx The request context
+ *
+ * @return  Resource context of the request
+ */
+void *coap_request_ctx_get_context(const coap_request_ctx_t *ctx);
+
+/**
+ * @brief   Get transport the packet was received over
+ * @see     @ref gcoap_socket_type_t for values.
+ *
+ * @param[in]   ctx The request context
+ *
+ * @return  Transport Layer type of the request
+ */
+uint32_t coap_request_ctx_get_tl_type(const coap_request_ctx_t *ctx);
 
 /**
  * @brief   Block1 helper struct
@@ -1811,13 +1851,14 @@ ssize_t coap_tree_handler(coap_pkt_t *pkt, uint8_t *resp_buf,
  * @param[in]   pkt             pointer to (parsed) CoAP packet
  * @param[out]  resp_buf        buffer for response
  * @param[in]   resp_buf_len    size of response buffer
- * @param[in]   context         ptr to a @ref coap_resource_subtree_t instance
+ * @param[in]   context         pointer to request context, must contain context
+ *                              to @ref coap_resource_subtree_t instance
  *
  * @returns     size of the reply packet on success
  * @returns     <0 on error
  */
 ssize_t coap_subtree_handler(coap_pkt_t *pkt, uint8_t *resp_buf,
-                             size_t resp_buf_len, void *context);
+                             size_t resp_buf_len, coap_request_ctx_t *context);
 
 /**
  * @brief   Convert message code (request method) into a corresponding bit field
@@ -1953,7 +1994,7 @@ ssize_t coap_reply_simple(coap_pkt_t *pkt,
  */
 extern ssize_t coap_well_known_core_default_handler(coap_pkt_t *pkt, \
                                                     uint8_t *buf, size_t len,
-                                                    void *context);
+                                                    coap_request_ctx_t *context);
 /**@}*/
 
 /**

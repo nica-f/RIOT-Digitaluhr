@@ -18,6 +18,7 @@ ifneq (,$(filter cpp,$(USEMODULE)))
 endif
 
 ifneq (,$(filter esp_eth,$(USEMODULE)))
+  FEATURES_REQUIRED += esp_eth
   USEMODULE += esp_idf_eth
   USEMODULE += esp_idf_event
   USEMODULE += esp_idf_gpio
@@ -60,16 +61,21 @@ ifneq (,$(filter esp_idf_nvs_flash,$(USEMODULE)))
   USEMODULE += mtd
 endif
 
-ifneq (,$(filter periph_rtc,$(USEMODULE)))
-    FEATURES_OPTIONAL += esp_rtc_timer_32k
+ifneq (,$(filter esp_idf_wifi,$(USEMODULE)))
+  # add additional modules required by esp_idf_wifi
+  USEMODULE += esp_idf_adc
+endif
+
+ifneq (,$(filter periph_rtt,$(USEMODULE)))
+  FEATURES_OPTIONAL += esp_rtc_timer_32k
 endif
 
 ifneq (,$(filter esp_rtc_timer_32k,$(FEATURES_USED)))
-    USEMODULE += esp_rtc_timer_32k
+  USEMODULE += esp_rtc_timer_32k
 endif
 
-ifneq (,$(filter periph_adc periph_dac,$(USEMODULE)))
-  FEATURES_REQUIRED += periph_adc_ctrl
+ifneq (,$(filter periph_gpio,$(USEMODULE)))
+  USEMODULE += esp_idf_gpio
 endif
 
 ifneq (,$(filter periph_i2c,$(USEMODULE)))
@@ -87,10 +93,15 @@ endif
 
 ifneq (,$(filter esp_spi_ram,$(USEMODULE)))
   FEATURES_REQUIRED += esp_spi_ram
+  FEATURES_OPTIONAL += esp_spi_oct
   USEMODULE += esp_idf_gpio
   USEMODULE += esp_idf_heap
   USEMODULE += esp_idf_spi_flash
   USEMODULE += esp_idf_spi_ram
+endif
+
+ifneq (,$(filter esp_spi_oct,$(FEATURES_USED)))
+  USEMODULE += esp_spi_oct
 endif
 
 ifneq (,$(filter esp_idf_heap,$(USEMODULE)))
@@ -107,6 +118,10 @@ endif
 
 ifneq (,$(filter mtd,$(USEMODULE)))
   USEMODULE += esp_idf_spi_flash
+endif
+
+ifneq (,$(filter periph_adc,$(USEMODULE)))
+  USEMODULE += esp_idf_adc
 endif
 
 ifneq (,$(filter periph_rtc,$(USEMODULE)))

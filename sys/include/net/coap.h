@@ -35,8 +35,10 @@ extern "C" {
  * @name    CoAP option numbers
  * @{
  */
+#define COAP_OPT_IF_MATCH       (1)
 #define COAP_OPT_URI_HOST       (3)
 #define COAP_OPT_ETAG           (4)
+#define COAP_OPT_IF_NONE_MATCH  (5)
 #define COAP_OPT_OBSERVE        (6)
 #define COAP_OPT_LOCATION_PATH  (8)
 #define COAP_OPT_URI_PATH       (11)
@@ -154,6 +156,7 @@ extern "C" {
 #define COAP_FORMAT_SENSML_EXI              (115)
 #define COAP_FORMAT_SENML_XML               (310)
 #define COAP_FORMAT_SENSML_XML              (311)
+#define COAP_FORMAT_DNS_MESSAGE           (65053)       /**< NON STANDARD! */
 /** @} */
 
 /**

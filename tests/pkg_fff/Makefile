@@ -3,7 +3,12 @@ USEPKG += fff
 # If periph_i2c is pulled in the real implementation conflicts with the mock
 FEATURES_BLACKLIST += periph_i2c
 
-# only two threads used
-CFLAGS += -DMAXTHREADS=2
-
 include $(RIOTBASE)/Makefile.include
+
+ifneq ($(MCU),esp32)
+  # only two threads used
+  CFLAGS += -DMAXTHREADS=2
+else
+  # ESP32x SoCs uses an extra thread for esp_timer
+  CFLAGS += -DMAXTHREADS=3
+endif

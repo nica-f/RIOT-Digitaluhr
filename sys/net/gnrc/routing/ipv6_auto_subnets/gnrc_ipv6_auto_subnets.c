@@ -17,14 +17,15 @@
  * This module provides an automatic configuration for networks with a (simple)
  * tree topology.
  *
- * If a sufficiently large IPv6 prefix (> /64) is provided via Router Advertisements,
- * a routing node with this module will automatically configure subnets from it
- * by dividing it into sub-prefixes for each downstream interface.
+ * If a sufficiently large IPv6 subnet (prefix length < /64) is provided via Router
+ * Advertisements, a routing node with this module will automatically configure
+ * subnets from it by dividing it into sub-prefixes for each downstream interface.
  *
  * When using the `gnrc_ipv6_auto_subnets_simple` module, there can only be a single
- * routing node on each level of the network but an arbitrary number of leaf nodes.
+ * routing node on each level of the network but an arbitrary number of leaf nodes and
+ * downstream interfaces.
  *
- * !['Skinny Tree' Example Topology](gnrc_ipv6_auto_subnets_simple.svg)
+ * ![Example Topology with only one router on each level](gnrc_ipv6_auto_subnets_simple.svg)
  *
  * If there are multiple routing nodes on the same link, coordination between the
  * routers is required.
@@ -36,7 +37,7 @@
  * The layer 2 address of the sender then determines the order in which the prefixes
  * are assigned.
  *
- * ![Example Topology](gnrc_ipv6_auto_subnets.svg)
+ * ![Example Topology with multiple routers](gnrc_ipv6_auto_subnets.svg)
  *
  * The downstream network(s) receive the sub-prefix via Router Advertisements
  * and the process repeats until the bits of the prefix are exhausted.
@@ -44,11 +45,35 @@
  *
  * The new subnet must no longer be considered on-link by the hosts in the
  * parent network.
- * Therefore the downstream router will send a router advertisement with only
- * a Route Information Option included to the upstream network.
+ * Therefore the downstream router will send a router advertisement, which only
+ * contains a Route Information Option, to the upstream network.
  * The Route Information Option contains the prefix of the downstream network
- * so that upstream routers will no longer consider hosts in this subnet on-link
+ * so that upstream routers will no longer consider hosts in this subnet on-link,
  * but instead will use the downstream router to route to the new subnet.
+ *
+ * The need for a Route Information Option
+ * ---------------------------------------
+ *
+ * All nodes that want to communicate with hosts in a downstream subnet must implement
+ * parsing of the Route Information Option. For routing RIOT nodes this is enabled by
+ * default, non-routing nodes need to enable the `gnrc_ipv6_nib_rio` module.
+ *
+ * This is because all addresses in the subnet are also within the original network, so
+ * without further information hosts would consider those addresses on-link and perform
+ * neighbor solicitation to communicate with them.
+ *
+ * E.g. if host Ⓒ  (`2001:db8:0:8:5075:35ff:fefa:30bc`) sends an ICMPv6 Echo request to
+ * Ⓑ  (`2001:db8:0:0:a7a2:12e0:48bc:7487`), it would not get a response:
+ *
+ * ![Auto-Subnets without RIO](gnrc_ipv6_auto_subnets-without_rio.svg)
+ *
+ * To solve this, the routing node Ⓐ  also sends a Router Advertisement to the <i>upstream</i>
+ * network that only contains a Route Information Option for each downstream network created
+ * by that router.
+ * This way hosts in the upstream network will prefer the route via Ⓐ  over link-local
+ * transmission as it is a stronger match than the upstream prefix:
+ *
+ * ![Auto-Subnets with RIO](gnrc_ipv6_auto_subnets-with_rio.svg)
  *
  * Usage
  * =====
@@ -127,6 +152,9 @@
 #ifndef CONFIG_GNRC_IPV6_AUTO_SUBNETS_NUMOF
 #define CONFIG_GNRC_IPV6_AUTO_SUBNETS_NUMOF         (1)
 #endif
+
+/* Code below should not be included by Doxygen */
+#ifndef DOXYGEN
 
 #define SERVER_THREAD_STACKSIZE                     (THREAD_STACKSIZE_DEFAULT)
 #define SERVER_MSG_QUEUE_SIZE                       (CONFIG_GNRC_IPV6_AUTO_SUBNETS_PEERS_MAX)
@@ -645,4 +673,5 @@ void gnrc_ipv6_auto_subnets_init(void)
                                 _eventloop, NULL, "auto_subnets");
 }
 #endif /* !IS_USED(MODULE_GNRC_IPV6_AUTO_SUBNETS_SIMPLE) */
+#endif /* !DOXYGEN */
 /** @} */

@@ -100,24 +100,48 @@ static const gpio_t dac_channels[] = DAC_GPIOS;
  * @{
  */
 
+#if defined(I2C0_SCL) && !defined(I2C0_SCL_PULLUP)
+/** Define SCL pullup enabled by default */
+#define I2C0_SCL_PULLUP true
+#endif
+#if defined(I2C0_SDA) && !defined(I2C0_SDA_PULLUP)
+/** Define SDA pullup enabled by default */
+#define I2C0_SDA_PULLUP true
+#endif
+
+#if defined(I2C1_SCL) && !defined(I2C1_SCL_PULLUP)
+/** Define SCL pullup enabled by default */
+#define I2C1_SCL_PULLUP true
+#endif
+#if defined(I2C1_SDA) && !defined(I2C1_SDA_PULLUP)
+/** Define SDA pullup enabled by default */
+#define I2C1_SDA_PULLUP true
+#endif
+
 /**
  * @brief   Static array with configuration for declared I2C devices
  */
 static const i2c_conf_t i2c_config[] = {
-    #if defined(I2C0_SCL) && defined(I2C0_SDA) && defined(I2C0_SPEED)
+#if defined(I2C0_SCL) && defined(I2C0_SDA) && defined(I2C0_SPEED)
     {
+        .module = PERIPH_I2C0_MODULE,
         .speed = I2C0_SPEED,
         .scl = I2C0_SCL,
         .sda = I2C0_SDA,
+        .scl_pullup = I2C0_SCL_PULLUP,
+        .sda_pullup = I2C0_SCL_PULLUP,
     },
-    #endif
-    #if defined(I2C1_SCL) && defined(I2C1_SDA) && defined(I2C1_SPEED)
+#endif
+#if defined(I2C1_SCL) && defined(I2C1_SDA) && defined(I2C1_SPEED)
     {
+        .module = PERIPH_I2C1_MODULE,
         .speed = I2C1_SPEED,
         .scl = I2C1_SCL,
         .sda = I2C1_SDA,
+        .scl_pullup = I2C1_SCL_PULLUP,
+        .sda_pullup = I2C1_SCL_PULLUP,
     },
-    #endif
+#endif
 };
 
 /**
@@ -138,33 +162,92 @@ static const i2c_conf_t i2c_config[] = {
  */
 
 /**
- * @brief   Static array of GPIOs that can be used as channels of PWM0
+ * @brief   GPIOs used as channels for the according PWM device
  */
 #ifdef PWM0_GPIOS
-static const gpio_t pwm0_channels[] = PWM0_GPIOS;
+static const gpio_t pwm0_gpios[] = PWM0_GPIOS;
 #endif
+
 /**
- * @brief   Static array of GPIOs that can be used as channels of PWM0
+ * @brief   GPIOs used as channels for the according PWM device
  */
 #ifdef PWM1_GPIOS
-static const gpio_t pwm1_channels[] = PWM1_GPIOS;
+static const gpio_t pwm1_gpios[] = PWM1_GPIOS;
 #endif
+
+/**
+ * @brief   GPIOs used as channels for the according PWM device
+ */
+#ifdef PWM2_GPIOS
+static const gpio_t pwm2_gpios[] = PWM2_GPIOS;
+#endif
+
+/**
+ * @brief   GPIOs used as channels for the according PWM device
+ */
+#ifdef PWM3_GPIOS
+static const gpio_t pwm3_gpios[] = PWM3_GPIOS;
+#endif
+
+/**
+ * @brief   PWM device configuration based on defined PWM channel GPIOs
+ */
+static const pwm_config_t pwm_config[] =
+{
+#ifdef PWM0_GPIOS
+    {
+        .module = PERIPH_LEDC_MODULE,
+        .group = LEDC_LOW_SPEED_MODE,
+        .timer = LEDC_TIMER_0,
+        .ch_numof = ARRAY_SIZE(pwm0_gpios),
+        .gpios = pwm0_gpios,
+    },
+#endif
+#ifdef PWM1_GPIOS
+    {
+        .module = PERIPH_LEDC_MODULE,
+#ifdef SOC_LEDC_SUPPORT_HS_MODE
+        .group = LEDC_HIGH_SPEED_MODE,
+#else
+        .group = LEDC_LOW_SPEED_MODE,
+#endif
+        .timer = LEDC_TIMER_1,
+        .ch_numof = ARRAY_SIZE(pwm1_gpios),
+        .gpios = pwm1_gpios,
+    },
+#endif
+#ifdef PWM2_GPIOS
+    {
+        .module = PERIPH_LEDC_MODULE,
+        .group = LEDC_LOW_SPEED_MODE,
+        .timer = LEDC_TIMER_2,
+        .ch_numof = ARRAY_SIZE(pwm2_gpios),
+        .gpios = pwm2_gpios,
+    },
+#endif
+#ifdef PWM3_GPIOS
+    {
+        .module = PERIPH_LEDC_MODULE,
+#ifdef SOC_LEDC_SUPPORT_HS_MODE
+        .group = LEDC_HIGH_SPEED_MODE,
+#else
+        .group = LEDC_LOW_SPEED_MODE,
+#endif
+        .timer = LEDC_TIMER_3,
+        .ch_numof = ARRAY_SIZE(pwm3_gpios),
+        .gpios = pwm3_gpios,
+    },
+#endif
+};
 
 /**
  * @brief   Number of PWM devices
  *
- * The number of PWM devices is determined from the PWM0_GPIOS and PWM1_GPIOS
- * definitions.
+ * The number of PWM devices is determined from the PWM device configuration.
  *
  * @note PWM_NUMOF definition must not be changed.
  */
-#if defined(PWM0_GPIOS) && defined(PWM1_GPIOS)
-#define PWM_NUMOF  (2)
-#elif defined(PWM0_GPIOS) || defined(PWM1_GPIOS)
-#define PWM_NUMOF  (1)
-#else
-#define PWM_NUMOF  (0)
-#endif
+#define PWM_NUMOF   ARRAY_SIZE(pwm_config)
 
 /** @} */
 
@@ -228,18 +311,18 @@ static const uart_conf_t uart_config[] = {
         .txd = UART0_TXD,
         .rxd = UART0_RXD,
     },
-    #if defined(UART1_TXD) && defined(UART1_RXD)
+#if defined(UART1_TXD) && defined(UART1_RXD)
     {
         .txd = UART1_TXD,
         .rxd = UART1_RXD,
     },
-    #endif
-    #if defined(UART2_TXD) && defined(UART2_RXD)
+#endif
+#if defined(UART2_TXD) && defined(UART2_RXD)
     {
         .txd = UART2_TXD,
         .rxd = UART2_RXD,
     },
-    #endif
+#endif
 };
 
 /**

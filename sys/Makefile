@@ -5,6 +5,9 @@ endif
 ifneq (,$(filter benchmark_udp,$(USEMODULE)))
   DIRS += test_utils/benchmark_udp
 endif
+ifneq (,$(filter bhp,$(USEMODULE)))
+  DIRS += bhp
+endif
 ifneq (,$(filter bluetil_%,$(USEMODULE)))
   DIRS += net/ble/bluetil
 endif
@@ -146,6 +149,9 @@ endif
 ifneq (,$(filter sock_dns_mock,$(USEMODULE)))
   DIRS += net/application_layer/sock_dns_mock
 endif
+ifneq (,$(filter sock_dodtls,$(USEMODULE)))
+  DIRS += net/application_layer/sock_dodtls
+endif
 ifneq (,$(filter sock_util,$(USEMODULE)))
   DIRS += net/sock
 endif
@@ -193,6 +199,9 @@ ifneq (,$(filter test_utils_interactive_sync,$(USEMODULE)))
 endif
 ifneq (,$(filter test_utils_netdev_eth_minimal,$(USEMODULE)))
   DIRS += test_utils/netdev_eth_minimal
+endif
+ifneq (,$(filter test_utils_netdev_ieee802154_minimal,$(USEMODULE)))
+  DIRS += test_utils/netdev_ieee802154_minimal
 endif
 ifneq (,$(filter test_utils_print_stack_usage,$(USEMODULE)))
   DIRS += test_utils/print_stack_usage

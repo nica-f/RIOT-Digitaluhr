@@ -4325,6 +4325,7 @@ boards/pba\-d\-01\-kw2x/include/board\.h:[0-9]+: warning: Member KW2XRF_PARAM_CS
 boards/pba\-d\-01\-kw2x/include/board\.h:[0-9]+: warning: Member KW2XRF_PARAM_INT \(macro definition\) of file board\.h is not documented\.
 boards/pba\-d\-01\-kw2x/include/board\.h:[0-9]+: warning: Member KW2XRF_PARAM_SPI \(macro definition\) of file board\.h is not documented\.
 boards/pba\-d\-01\-kw2x/include/board\.h:[0-9]+: warning: Member KW2XRF_PARAM_SPI_CLK \(macro definition\) of file board\.h is not documented\.
+boards/pba\-d\-01\-kw2x/include/board\.h:[0-9]+: warning: Member KW2XRF_PARAM_RESET \(macro definition\) of file board\.h is not documented\.
 boards/pba\-d\-01\-kw2x/include/board\.h:[0-9]+: warning: Member KW2XRF_SHARED_SPI \(macro definition\) of file board\.h is not documented\.
 boards/pba\-d\-01\-kw2x/include/board\.h:[0-9]+: warning: Member LED0_MASK \(macro definition\) of file board\.h is not documented\.
 boards/pba\-d\-01\-kw2x/include/board\.h:[0-9]+: warning: Member LED0_OFF \(macro definition\) of file board\.h is not documented\.
@@ -14281,6 +14282,8 @@ sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_BLOCK1 \(macro definiti
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_BLOCK2 \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_CONTENT_FORMAT \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_ETAG \(macro definition\) of group net_coap is not documented\.
+sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_IF_MATCH \(macro definition\) of group net_coap is not documented\.
+sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_IF_NONE_MATCH \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_MAX_AGE \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_LOCATION_PATH \(macro definition\) of group net_coap is not documented\.
 sys/include/net/coap\.h:[0-9]+: warning: Member COAP_OPT_LOCATION_QUERY \(macro definition\) of group net_coap is not documented\.
@@ -14965,3 +14968,17 @@ pkg/nimble/autoadv/include/nimble_autoadv_params\.h:[0-9]+: warning: Member NIMB
 pkg/nimble/autoadv/include/nimble_autoadv_params\.h:[0-9]+: warning: Member NIMBLE_AUTOADV_OWN_ADDR_TYPE \(macro definition\) of file nimble_autoadv_params\.h is not documented\.
 pkg/nimble/autoadv/include/nimble_autoadv_params\.h:[0-9]+: warning: Member NIMBLE_AUTOADV_FILTER_POLICY \(macro definition\) of file nimble_autoadv_params\.h is not documented\.
 pkg/nimble/autoadv/include/nimble_autoadv_params\.h:[0-9]+: warning: Member NIMBLE_AUTOADV_PARAMS \(macro definition\) of file nimble_autoadv_params\.h is not documented\.
+cpu/esp32/include/periph_cpu_esp32\.h:[0-9]+: warning: Member GPIO[0-9]+ \(macro definition\) of file periph_cpu_esp32\.h is not documented.
+cpu/esp32/include/periph_cpu_esp32c3\.h:[0-9]+: warning: Member GPIO[0-9]+ \(macro definition\) of file periph_cpu_esp32c3\.h is not documented.
+boards/common/esp32c3/include/board_common.h:[0-9]+: warning: Member LED[0-9]_[A-Z]+ \(macro definition\) of file board_common\.h is not documented.
+boards/common/esp32c3/include/board_common.h:[0-9]+: warning: Member SPIFFS_[_A-Z]+ \(macro definition\) of file board_common\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/arduino_pinmap\.h:[0-9]+: warning: Member ARDUINO_PIN_[A0-9]+ \(macro definition\) of file arduino_pinmap\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/arduino_pinmap\.h:[0-9]+: warning: Member ARDUINO_[A0-9]+ \(macro definition\) of file arduino_pinmap\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/board\.h:[0-9]+: warning: Member LED0_PIN \(macro definition\) of file board\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/board\.h:[0-9]+: warning: Member LED[A-Z0-9_]+ \(macro definition\) of file board\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/board\.h:[0-9]+: warning: Member BTN[A-Z0-9_]+ \(macro definition\) of file board\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/board\.h:[0-9]+: warning: Member SDCARD_SPI_PARAM_[A-Z]+ \(macro definition\) of file board\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/board\.h:[0-9]+: warning: Member SDCARD_SPI_PARAM_[A-Z]+ \(macro definition\) of file board\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/periph_conf\.h:[0-9]+: warning: Member UART_[A-Z0-9_]+ \(macro definition\) of file periph_conf\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/periph_conf\.h:[0-9]+: warning: Member [A-Z0-9_]+NUMOF \(macro definition\) of file periph_conf\.h is not documented.
+boards/waveshare\-nrf52840\-eval\-kit/include/periph_conf\.h:[0-9]+: warning: Member [a-z0-9_]+config\[\] \(variable\) of file periph_conf\.h is not documented.

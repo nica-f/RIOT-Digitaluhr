@@ -959,8 +959,7 @@ void esp_wifi_setup (esp_wifi_netdev_t* dev)
     esp_wifi_sta_wpa2_ent_set_password((const unsigned char *)ESP_WIFI_EAP_PASS,
                                        strlen(ESP_WIFI_EAP_PASS));
 #else /* defined(ESP_WIFI_EAP_USER) && defined(ESP_WIFI_EAP_PASS) */
-#error ESP_WIFI_EAP_USER and ESP_WIFI_EAP_PASS have to define the user name \
-       and the password for EAP phase 2 authentication in esp_wifi_enterprise
+#error "ESP_WIFI_EAP_USER and ESP_WIFI_EAP_PASS have to be defined for EAP phase 2 authentication"
 #endif /* defined(ESP_WIFI_EAP_USER) && defined(ESP_WIFI_EAP_PASS) */
     esp_wifi_sta_wpa2_ent_enable();
 #endif /* defined(MODULE_ESP_WIFI_ENTERPRISE) && !defined(MODULE_ESP_WIFI_AP) */
@@ -984,6 +983,8 @@ void esp_wifi_setup (esp_wifi_netdev_t* dev)
     dev->event_disc = 0;
     dev->connected = false;
 #endif /* MODULE_ESP_WIFI_AP */
+
+    netdev_register(&dev->netdev, NETDEV_ESP_WIFI, 0);
 }
 
 #endif /* MODULE_ESP_WIFI */

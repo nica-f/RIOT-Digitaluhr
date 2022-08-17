@@ -189,6 +189,9 @@ static ieee802154_dev_t *_reg_callback(ieee802154_dev_type_t type, void *opaque)
     case IEEE802154_DEV_TYPE_SOCKET_ZEP:
         printf("socket_zep");
         break;
+    case IEEE802154_DEV_TYPE_KW2XRF:
+        printf("kw2xrf");
+        break;
     }
 
     puts(".");
@@ -338,7 +341,7 @@ static void submac_rx_done(ieee802154_submac_t *submac)
     printf("%u, ", (unsigned)((buffer[1] & IEEE802154_FCF_VERS_MASK) >> 4));
     printf("Seq.: %u\n", (unsigned)ieee802154_get_seq(buffer));
     od_hex_dump(buffer + mhr_len, data_len - mhr_len, 0);
-    printf("txt: ");
+    printf("txt (%u chars): ", data_len - mhr_len);
     for (int i = mhr_len; i < data_len; i++) {
         if ((buffer[i] > 0x1F) && (buffer[i] < 0x80)) {
             putchar((char)buffer[i]);
