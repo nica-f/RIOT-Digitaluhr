@@ -73,6 +73,7 @@ Hynitron CST816S
 	Can write  0x03,0xe5 to turn off
 
 Kionix KX022/KX023
+	https://kionixfs.azureedge.net/en/datasheet/KX023-1025%20Specifications%20Rev%2012.0.pdf
 
 magneto
 	not GMC303
