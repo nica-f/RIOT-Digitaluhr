@@ -116,14 +116,9 @@ void board_power_off(void)
 {
     // power off peripherals as much as we can
     gpio_clear(LCD_DISP);
-#if 0
-    gpio_clear(LCD_BACKLIGHT);
-    gpio_clear(VIBRATOR);
-#else
     pwm_poweroff(PWM_DEV(0)); // LCD ExtCOM
     pwm_poweroff(PWM_DEV(1)); // LCD backlight
     pwm_poweroff(PWM_DEV(2)); // vibration motor
-#endif
     gpio_clear(HRM_PWR);
     gpio_clear(GPS_PWR);
 
