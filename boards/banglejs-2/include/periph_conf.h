@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2019 Inria
- *               2022 Nicole Faerber <nicole.faerber@digitaluhr-manufaktur.de>
+ *               2022 Nicole Faerber, Siegen, Germany
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level

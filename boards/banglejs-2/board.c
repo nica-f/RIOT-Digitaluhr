@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Inria
+ * Copyright (C) 2022 Nicole Faerber, Siegen, Germany
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level
@@ -7,13 +7,13 @@
  */
 
 /**
- * @ingroup     boards_adafruit-clue
+ * @ingroup     boards_baglejs-2
  * @{
  *
  * @file
- * @brief       Board initialization for the Adafruit Clue
+ * @brief       Board initialization for the Bagle JS2
  *
- * @author      Alexandre Abadie <alexandre.abadie@inria.fr>
+ * @author      Nicole Faebrer <nicole.faerber@digitaluhr-manufaktur.de>
  *
  * @}
  */
@@ -107,7 +107,7 @@ void board_init(void)
         pwm_set(PWM_DEV(2), 0, 0); // vibration off
         pwm_poweroff(PWM_DEV(2));
     }
-    
+
     // init ADC
     adc_init(1); // battery voltage monitor
 }
