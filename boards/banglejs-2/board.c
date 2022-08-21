@@ -67,6 +67,7 @@ void board_init(void)
     gpio_init(VIBRATOR, GPIO_OUT);
     gpio_clear(VIBRATOR);
 
+    gpio_init(HRM_INT, GPIO_IN);
     gpio_init(HRM_PWR, GPIO_OUT);
     gpio_clear(HRM_PWR);
 
@@ -80,6 +81,8 @@ void board_init(void)
     // LCD CS is high active
     gpio_init(LCD_CS, GPIO_OUT);
     gpio_clear(LCD_CS);
+
+    gpio_init(ACCEL_INT, GPIO_IN);
 
     gpio_init(BUTTON0, GPIO_IN_PU);
     gpio_init(EXTPOWER_PRESENT, GPIO_IN);
