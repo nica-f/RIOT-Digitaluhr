@@ -63,6 +63,9 @@ config MODULE_LVGL_HAL
 config MODULE_LVGL_MISC
     bool
 
+config MODULE_LVGL_ONLY_FULL_LINES
+    bool
+
 config MODULE_LVGL_WIDGETS
     bool
 
