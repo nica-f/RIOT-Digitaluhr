@@ -249,8 +249,6 @@ int lpm013m126_init(lpm013m126_t *dev, const lpm013m126_params_t *params)
     gpio_init(dev->params->disp_pin, GPIO_OUT);
     gpio_set(dev->params->disp_pin);
 
-//    spi_init(dev->params->spi);
-
     //_display_on = 1;
     // lpm013m126_on();
 
