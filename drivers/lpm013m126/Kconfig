@@ -12,6 +12,7 @@ config MODULE_LPM013M126
     depends on TEST_KCONFIG
     select MODULE_PERIPH_SPI
     select MODULE_PERIPH_GPIO
+    select MODULE_LVGL_ONLY_FULL_LINES
 
 config HAVE_LPM013M126
     bool

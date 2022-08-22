@@ -31,6 +31,10 @@
 #define LPM013M126_DISP_DEV_HEIGHT     (176U)
 #endif
 
+#ifndef LPM013M126_DISP_DEV_WIDTH
+#define LPM013M126_DISP_DEV_WIDTH     (176U)
+#endif
+
 //
 // in fact the LCD is 3bpp but smallest LVGL supports is 8bpp
 // results in RGB 332
@@ -55,10 +59,15 @@ static uint16_t _lpm013m126_height(const disp_dev_t *disp_dev)
 
 static uint16_t _lpm013m126_width(const disp_dev_t *disp_dev)
 {
+#if 0
     const lpm013m126_t *dev = (lpm013m126_t *)disp_dev;
     assert(dev);
 
     return dev->params->lines;
+#else
+    (void)disp_dev;
+    return LPM013M126_DISP_DEV_WIDTH;
+#endif
 }
 
 static uint8_t _lpm013m126_color_depth(const disp_dev_t *disp_dev)
