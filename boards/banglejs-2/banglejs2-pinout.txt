@@ -39,8 +39,8 @@ Pin		Connected				State
 34	P1.02	touch SCL				SCL
 35	P1.03	touch RESET# (active low)		out
 36	P1.04	touch INT# (active low)			in
-37	P1.05	accel SDA				SDA
-38	P1.06	accel SCL				SCL
+37	P1.05	accel SCL				SCL
+38	P1.06	accel SDA				SDA
 39	P1.07	accel INT#				in
 40	P1.08
 41	P1.09
@@ -56,7 +56,7 @@ Peripherals
 -----------
 memlcd		LPM013M126, 8 color RGB 3bpp
 HRM		VC31					addr: 0x33
-touch		CTS816S					addr: 0x15
+touch		CST816S					addr: 0x15
 accel		KX023					addr: 0x1e
 pressure	BMP280, v2.1 uses Goertek SPL06-001	addr: 0x76
 megneto		???, not GMC303				addr: 0x0C

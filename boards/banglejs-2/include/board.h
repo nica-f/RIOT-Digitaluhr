@@ -72,8 +72,8 @@ extern "C" {
 #define ACCEL_I2C_DEV               I2C_DEV(1)
 #define ACCEL_I2C_ADDR              (0x1e)
 #define ACCEL_INT                   GPIO_PIN(1, 7)
-#define ACCEL_SCL                   GPIO_PIN(1, 6)
-#define ACCEL_SDA                   GPIO_PIN(1, 5)
+#define ACCEL_SCL                   GPIO_PIN(1, 5)
+#define ACCEL_SDA                   GPIO_PIN(1, 6)
 
 #define MAGN_I2C_DEV                I2C_DEV(1)
 #define MAGN_I2C_ADDR               (0x0c)
