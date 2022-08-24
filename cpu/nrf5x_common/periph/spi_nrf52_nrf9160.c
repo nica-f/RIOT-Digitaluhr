@@ -123,6 +123,13 @@ static void _clear_workaround(spi_t bus)
 #endif
 }
 
+static void _setup_shared_peripheral(spi_t bus)
+{
+    SPI_SCKSEL = spi_config[bus].sclk;
+    SPI_MOSISEL = spi_config[bus].mosi;
+    SPI_MISOSEL = spi_config[bus].miso;
+}
+
 void spi_init(spi_t bus)
 {
     assert(bus < SPI_NUMOF);
@@ -133,6 +140,7 @@ void spi_init(spi_t bus)
     mutex_lock(&busy[bus]);
     /* initialize pins */
     spi_init_pins(bus);
+    _setup_shared_peripheral(bus);
 }
 
 int spi_init_with_gpio_mode(spi_t bus, const spi_gpio_mode_t* mode)
@@ -165,9 +173,6 @@ void spi_init_pins(spi_t bus)
     spi_init_with_gpio_mode(bus, &gpio_modes);
 
     /* select pins for the SPI device */
-    SPI_SCKSEL = spi_config[bus].sclk;
-    SPI_MOSISEL = spi_config[bus].mosi;
-    SPI_MISOSEL = spi_config[bus].miso;
     _setup_workaround_for_ftpan_58(bus);
     spi_twi_irq_register_spi(dev(bus), spi_isr_handler, (void *)(uintptr_t)bus);
 }
@@ -178,6 +183,12 @@ void spi_acquire(spi_t bus, spi_cs_t cs, spi_mode_t mode, spi_clk_t clk)
     assert((unsigned)bus < SPI_NUMOF);
 
     mutex_lock(&locks[bus]);
+
+    if (IS_ACTIVE(MODULE_NRF5X_PERIPH_SHARED)) {
+        nrf5x_spi_acquire(dev(bus), spi_isr_handler, (void *)(uintptr_t)bus);
+        _setup_shared_peripheral(bus);
+    }
+
     /* configure bus */
     dev(bus)->CONFIG = mode;
     dev(bus)->FREQUENCY = clk;
@@ -190,6 +201,10 @@ void spi_release(spi_t bus)
     /* power off everything */
     dev(bus)->ENABLE = 0;
     mutex_unlock(&locks[bus]);
+
+    if (IS_ACTIVE(MODULE_NRF5X_PERIPH_SHARED)) {
+        nrf5x_spi_release(dev(bus));
+    }
 }
 
 static size_t _transfer(spi_t bus, const uint8_t *out_buf, uint8_t *in_buf,

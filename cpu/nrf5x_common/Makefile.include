@@ -1,3 +1,5 @@
 CFLAGS += -DCPU_FAM_$(call uppercase_and_underscore,$(CPU_FAM))
 
+PSEUDOMODULES += nrf5x_periph_shared
+
 INCLUDES += -I$(RIOTCPU)/nrf5x_common/include
