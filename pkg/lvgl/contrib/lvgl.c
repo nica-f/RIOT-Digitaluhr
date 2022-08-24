@@ -121,16 +121,16 @@ static void _touch_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 }
 #endif
 
-#if IS_USED(MODULE_LVGL_ONLY_FULL_LINES)
+//#if IS_USED(MODULE_LVGL_ONLY_FULL_LINES)
 static void _lvgl_disp_rounder_cb(lv_disp_drv_t * disp_drv, lv_area_t * area)
 {
   (void) disp_drv;
-
+//#error yes
    /* for displays requiring always full line writes, like lpm013m126 */
    area->x1 = 0;
    area->x2 = disp_drv->hor_res-1;
 }
-#endif
+//#endif
 
 void lvgl_init(screen_dev_t *screen_dev)
 {
@@ -158,9 +158,9 @@ void lvgl_init(screen_dev_t *screen_dev)
        underlying display device parameters */
     disp_drv.hor_res = disp_dev_width(screen_dev->display);
     disp_drv.ver_res = disp_dev_height(screen_dev->display);
-#if IS_USED(MODULE_LVGL_ONLY_FULL_LINES)
+//#if IS_USED(MODULE_LVGL_ONLY_FULL_LINES)
     disp_drv.rounder_cb = _lvgl_disp_rounder_cb;
-#endif
+//#endif
 #endif
 
     lv_disp_drv_register(&disp_drv);
