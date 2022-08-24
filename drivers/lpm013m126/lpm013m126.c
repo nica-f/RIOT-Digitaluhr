@@ -100,8 +100,8 @@ static int lpm013m126_write_8bpp_lines(const lpm013m126_t *dev, const uint16_t *
     uint8_t *inlines = (uint8_t *)lines;
 
     if (cnt > TRANSER_BUFFER_LINES) {
+        DEBUG("lpm013m126: write clipped to buffer %d>%d\n", cnt, TRANSER_BUFFER_LINES);
         cnt=TRANSER_BUFFER_LINES;
-        DEBUG("lpm013m126: write clipped to buffer\n");
     }
 
     // DEBUG("l8 %d %d\n", start, cnt);
@@ -236,7 +236,7 @@ int lpm013m126_init(lpm013m126_t *dev, const lpm013m126_params_t *params)
     assert(params);
     dev->params = params;
 
-    DEBUG("LPM013M126 init()\n");
+    //DEBUG("LPM013M126 init()\n");
     // XXX_pwm_poweron(PWM_DEV(1));
 
     //extcom_pwm_timeout.callback = lpm013m126_pwm_timeout;
