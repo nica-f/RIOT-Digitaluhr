@@ -77,6 +77,24 @@ Kionix KX022/KX023
 
 magneto
 	not GMC303
+	https://github.com/GlobalMEMS/Datasheets/blob/master/GMC303A%20Datasheet%20V1.3.pdf
+	https://raw.githubusercontent.com/GlobalMEMS/Datasheets/master/GMC303A%20Datasheet%20V1.3.pdf
+	https://github.com/GlobalMEMS/GMC303-Example-Code-AT-START-F403/tree/master/LibGMEMS/GMC303
+
+	0x00	0x02 0x03
+	0x01	0x12 0x13
+	From Espruino:
+	0x3e	read -> start single measurement, always returns 0x22
+	0x4e	status
+	// &0x02 seems always set
+	// &0x16 seems set if we read twice
+	// &0x32 might be reading in progress
+	0x4f	Yh
+	0x50	Yl
+	0x51	Xh
+	0x52	Xl
+	0x53	Zh
+	0x54	Zl
 
 BMP280
 	https://www.bosch-sensortec.com/products/environmental-sensors/pressure-sensors/bmp280/

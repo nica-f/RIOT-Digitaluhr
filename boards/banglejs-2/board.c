@@ -31,6 +31,8 @@
 #include "periph/spi.h"
 
 #include "timex.h"
+#include "ztimer.h"
+
 
 #ifdef MODULE_MTD
 static const mtd_spi_nor_params_t _banglejs2_nor_params = {
@@ -125,6 +127,8 @@ void board_init(void)
 
 void board_power_off(void)
 {
+    ztimer_sleep(ZTIMER_MSEC, 5);
+
     // power off peripherals as much as we can
     gpio_clear(LCD_DISP);
     pwm_poweroff(PWM_DEV(0)); // LCD ExtCOM

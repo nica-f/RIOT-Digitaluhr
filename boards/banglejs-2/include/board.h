@@ -49,18 +49,18 @@ extern "C" {
 #define CHARGE_COMPLETE             GPIO_PIN(0, 25)
 #define BATTERY_ADC                 NRF52_AIN1
 
-#define ATM_PRESSURE_I2C_DEV        I2C_DEV(1)
+#define ATM_PRESSURE_I2C_DEV        I2C_DEV(2)
 #define ATM_PRESSURE_I2C_ADDR       (0x76)
 //#define ATM_PRESSURE_PWR            GPIO_PIN(0, )
 #define ATM_PRESSURE_SCL            GPIO_PIN(0, 2)
 #define ATM_PRESSURE_SDA            GPIO_PIN(1, 15)
 
-#define HRM_I2C_DEV                 I2C_DEV(1)
+#define HRM_I2C_DEV                 I2C_DEV(3)
 #define HRM_I2C_ADDR                (0x33)
 #define HRM_PWR                     GPIO_PIN(0, 21)
 #define HRM_INT                     GPIO_PIN(0, 22)
-#define HRM_SCL                     GPIO_PIN(0, 21)
-#define HRM_SDA                     GPIO_PIN(1, 0)
+#define HRM_SCL                     GPIO_PIN(1, 0)
+#define HRM_SDA                     GPIO_PIN(0, 24)
 
 #define TOUCH_I2C_DEV               I2C_DEV(0)
 #define TOUCH_I2C_ADDR              (0x15)
@@ -75,7 +75,7 @@ extern "C" {
 #define ACCEL_SCL                   GPIO_PIN(1, 5)
 #define ACCEL_SDA                   GPIO_PIN(1, 6)
 
-#define MAGN_I2C_DEV                I2C_DEV(1)
+#define MAGN_I2C_DEV                I2C_DEV(4)
 #define MAGN_I2C_ADDR               (0x0c)
 #define MAGN_SCL                    GPIO_PIN(1, 13)
 #define MAGN_SDA                    GPIO_PIN(1, 12)
