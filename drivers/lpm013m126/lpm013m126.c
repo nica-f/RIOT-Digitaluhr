@@ -10,7 +10,7 @@
 #include "lpm013m126.h"
 #include "lpm013m126_internal.h"
 
-#define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 0
 #include "debug.h"
 
 //
@@ -66,10 +66,6 @@ int lpm013m126_write_lines(const lpm013m126_t *dev, uint8_t *lines, uint8_t star
     if (dev->params->spi_clk != SPI_CLK_5MHZ)
         DEBUG("wl clk fail %d\n", dev->params->spi_clk);
 
-    gpio_set(dev->params->cs_pin);
-
-    spi_acquire(dev->params->spi, SPI_CS_UNDEF, dev->params->spi_mode, dev->params->spi_clk);
-
     bufp = transfer_buffer;
     *bufp++ = LPM013M126_CMD_UPDATE | (start >> 8);
     *bufp++ = (start & 0xff);
@@ -85,10 +81,12 @@ int lpm013m126_write_lines(const lpm013m126_t *dev, uint8_t *lines, uint8_t star
     *bufp++ = 0;
 
     gpio_set(dev->params->cs_pin);
+    spi_acquire(dev->params->spi, SPI_CS_UNDEF, dev->params->spi_mode, dev->params->spi_clk);
+
     spi_transfer_bytes(dev->params->spi, SPI_CS_UNDEF, false, transfer_buffer, NULL, (cnt*(2+(LPM013M126_COLUMNS/2))+2) );
-    gpio_clear(dev->params->cs_pin);
 
     spi_release(dev->params->spi);
+    gpio_clear(dev->params->cs_pin);
 
     return cnt;
 }
@@ -116,18 +114,19 @@ static int lpm013m126_write_8bpp_lines(const lpm013m126_t *dev, const uint16_t *
     *bufp++ = (start & 0xff);
 
     for (int i=0; i<cnt; i++) {
-        uint8_t p1, p2;
+        // uint8_t p1, p2;
         for (int x=0; x<LPM013M126_COLUMNS; x+=2) {
-           p1 = inlines[(i*LPM013M126_COLUMNS)+x];
-           p2 = inlines[(i*LPM013M126_COLUMNS)+x+1];
-#if 0
+           // p1 = inlines[(i*LPM013M126_COLUMNS)+x];
+           // p2 = inlines[(i*LPM013M126_COLUMNS)+x+1];
+#if 0 // LVGL 16bpp
            p1 = (((p1 & 0xf800) ? 1 : 0) << 3) |
                 (((p1 & 0x07e0) ? 1 : 0) << 2) |
                 (((p1 & 0x001f) ? 1 : 0) << 1);
            p2 = (((p2 & 0xf800) ? 1 : 0) << 3) |
                 (((p2 & 0x07e0) ? 1 : 0) << 2) |
                 (((p2 & 0x001f) ? 1 : 0) << 1);
-#else
+#endif
+#if 0 // LVGL 8bpp
            p1 = (((p1 & 0xc0) ? 1 : 0) << 3) |
                 (((p1 & 0x38) ? 1 : 0) << 2) |
                 (((p1 & 0x07) ? 1 : 0) << 1);
@@ -135,8 +134,9 @@ static int lpm013m126_write_8bpp_lines(const lpm013m126_t *dev, const uint16_t *
                 (((p2 & 0x38) ? 1 : 0) << 2) |
                 (((p2 & 0x07) ? 1 : 0) << 1);
 #endif
-
-           *(bufp+(x/2))=(p1<<4) | p2;
+           // *(bufp+(x/2))=(p1<<4) | p2;
+           #define P4(x)  ((((x & 0xc0) ? 1 : 0) << 3) | (((x & 0x38) ? 1 : 0) << 2) | (((x & 0x07) ? 1 : 0) << 1))
+           *(bufp+(x/2))=(P4(inlines[(i*LPM013M126_COLUMNS)+x]) << 4) | P4(inlines[(i*LPM013M126_COLUMNS)+x+1]);
         }
         bufp += (LPM013M126_COLUMNS/2);
         start++;
