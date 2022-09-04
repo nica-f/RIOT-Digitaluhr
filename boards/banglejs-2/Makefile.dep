@@ -7,7 +7,6 @@ ifneq (,$(filter mtd,$(USEMODULE)))
   USEMODULE += mtd_spi_nor
 endif
 
-# USEMODULE += nrf5x_periph_shared
 USEMODULE += cst816s
 
 ifneq (,$(filter disp_dev,$(USEMODULE)))
