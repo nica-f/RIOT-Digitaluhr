@@ -30,11 +30,11 @@ endif
 USEMODULE += auto_init_gnrc_netif
 USEMODULE += gnrc_ipv6_default
 USEMODULE += gnrc_tcp
-USEMODULE += gnrc_pktbuf_cmd
+USEMODULE += shell_cmd_gnrc_pktbuf
 USEMODULE += gnrc_netif_single    # Only one interface used and it makes
                                   # shell commands easier
 USEMODULE += shell
-USEMODULE += shell_commands
+USEMODULE += shell_cmds_default
 USEMODULE += od
 
 # Export used tap device to environment

@@ -3,13 +3,13 @@ include ../Makefile.tests_common
 
 USEMODULE += gnrc_ipv6_router_default
 USEMODULE += gnrc_netif
-USEMODULE += gnrc_pktbuf_cmd
+USEMODULE += shell_cmd_gnrc_pktbuf
 USEMODULE += netdev_eth
 USEMODULE += netdev_test
 USEMODULE += od
 USEMODULE += ps
 USEMODULE += shell
-USEMODULE += shell_commands
+USEMODULE += shell_cmds_default
 USEMODULE += xtimer
 
 CFLAGS += -DTEST_SUITES

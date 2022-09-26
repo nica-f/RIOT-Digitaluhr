@@ -23,7 +23,7 @@ USEMODULE += netdev_test
 USEMODULE += gnrc_ipv6_router_default
 USEMODULE += gnrc_icmpv6_error
 USEMODULE += gnrc_pktdump
-USEMODULE += gnrc_pktbuf_cmd
+USEMODULE += shell_cmd_gnrc_pktbuf
 # IPv6 extension headers
 USEMODULE += gnrc_ipv6_ext_frag
 # UDP support for payload
@@ -33,7 +33,7 @@ USEMODULE += od
 USEMODULE += embunit
 # Add also the shell, some shell commands
 USEMODULE += shell
-USEMODULE += shell_commands
+USEMODULE += shell_cmds_default
 USEMODULE += ps
 
 # The test requires some setup and to be run as root

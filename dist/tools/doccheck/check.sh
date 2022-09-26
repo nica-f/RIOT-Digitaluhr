@@ -13,6 +13,7 @@
 SCRIPTDIR="$(cd "$(dirname "$0")"; pwd)"
 RIOTBASE="$(cd "${SCRIPTDIR}"/../../..; pwd)"
 EXCLUDE_PATTERN_FILE="${SCRIPTDIR}/exclude_patterns"
+GENERIC_EXCLUDE_PATTERN_FILE="${SCRIPTDIR}/generic_exclude_patterns"
 
 . "${RIOTBASE}"/dist/tools/ci/github_annotate.sh
 
@@ -28,7 +29,7 @@ else
     CRESET=
 fi
 
-DOXY_OUTPUT=$(make -C "${RIOTBASE}" doc 2>&1 | grep -Evf "${EXCLUDE_PATTERN_FILE}")
+DOXY_OUTPUT=$(make -C "${RIOTBASE}" doc 2>&1 | grep -Evf "${EXCLUDE_PATTERN_FILE}" -f"${GENERIC_EXCLUDE_PATTERN_FILE}")
 DOXY_ERRCODE=$?
 RESULT=0
 
@@ -66,8 +67,8 @@ exclude_filter() {
 
 # Check groups are correctly defined (e.g. no undefined groups and no group
 # defined multiple times)
-ALL_RAW_DEFGROUP=$(git grep -n @defgroup -- '*.h' '*.c' '*.txt' | exclude_filter)
-ALL_RAW_INGROUP=$(git grep -n '@ingroup' -- '*.h' '*.c' '*.txt' | exclude_filter)
+ALL_RAW_DEFGROUP=$(git grep -n @defgroup -- '*.h' '*.hpp' '*.txt' 'makefiles/pseudomodules.inc.mk' 'sys/net/gnrc/routing/ipv6_auto_subnets/gnrc_ipv6_auto_subnets.c'| exclude_filter)
+ALL_RAW_INGROUP=$(git grep -n '@ingroup' -- '*.h' '*.hpp' '*.txt' 'makefiles/pseudomodules.inc.mk' 'sys/net/gnrc/routing/ipv6_auto_subnets/gnrc_ipv6_auto_subnets.c'| exclude_filter)
 DEFINED_GROUPS=$(echo "${ALL_RAW_DEFGROUP}" | \
                     grep -oE '@defgroup[ ]+[^ ]+' | \
                     grep -oE '[^ ]+$' | \

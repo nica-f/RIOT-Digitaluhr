@@ -466,7 +466,7 @@ static int _set_remote(const uri_parser_result_t *uri_comp,
               _uri);
         return -EHOSTUNREACH;
     }
-    if (uri_comp->port == NULL) {
+    if (uri_comp->port == 0) {
         if (strncmp(_uri, "coap:", sizeof("coap:") - 1) == 0) {
             remote->port = CONFIG_GCOAP_PORT;
         }
@@ -475,15 +475,7 @@ static int _set_remote(const uri_parser_result_t *uri_comp,
         }
     }
     else {
-        char port_str[uri_comp->port_len + 1];
-
-        strncpy(port_str, uri_comp->port, uri_comp->port_len);
-        port_str[uri_comp->port_len] = '\0';
-        remote->port = atoi(port_str);
-        if (remote->port == 0U) {
-            DEBUG("gcoap_dns: invalid port %s\n", port_str);
-            return -EINVAL;
-        }
+        remote->port = uri_comp->port;
     }
     return 0;
 }
@@ -740,11 +732,17 @@ static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t *pdu,
     switch (coap_get_content_type(pdu)) {
         case COAP_FORMAT_DNS_MESSAGE:
         case COAP_FORMAT_NONE: {
-            uint32_t ttl;
+            uint32_t ttl = 0;
 
             context->res = dns_msg_parse_reply(data, data_len, family,
                                                context->addr_out, &ttl);
-            if (context->res > 0) {
+            if (IS_USED(MODULE_DNS_CACHE) && (context->res > 0)) {
+                uint32_t max_age;
+
+                if (coap_opt_get_uint(pdu, COAP_OPT_MAX_AGE, &max_age) < 0) {
+                    max_age = 60;
+                }
+                ttl += max_age;
                 dns_cache_add(_domain_name_from_ctx(context), context->addr_out, context->res, ttl);
             }
             else if (ENABLE_DEBUG && (context->res < 0)) {

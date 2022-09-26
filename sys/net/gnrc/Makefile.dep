@@ -394,11 +394,6 @@ ifneq (,$(filter gnrc_udp,$(USEMODULE)))
   USEMODULE += udp
 endif
 
-ifneq (,$(filter gnrc_udp_cmd,$(USEMODULE)))
-  USEMODULE += gnrc_udp
-  USEMODULE += gnrc_pktdump
-endif
-
 ifneq (,$(filter gnrc_tcp,$(USEMODULE)))
   DEFAULT_MODULE += auto_init_gnrc_tcp
   USEMODULE += gnrc_nettype_tcp
@@ -438,7 +433,7 @@ ifneq (,$(filter gnrc_pktbuf, $(USEMODULE)))
   ifeq (,$(filter gnrc_pktbuf_%, $(USEMODULE)))
     USEMODULE += gnrc_pktbuf_static
   endif
-  ifeq (gnrc_pktbuf_cmd,$(filter gnrc_pktbuf_%, $(USEMODULE)))
+  ifeq (shell_cmd_gnrc_pktbuf,$(filter gnrc_pktbuf_%, $(USEMODULE)))
     USEMODULE += gnrc_pktbuf_static
   endif
   DEFAULT_MODULE += auto_init_gnrc_pktbuf
@@ -449,7 +444,7 @@ ifneq (,$(filter gnrc_pktbuf_%, $(USEMODULE)))
   USEMODULE += gnrc_pktbuf # make MODULE_GNRC_PKTBUF macro available for all implementations
 endif
 
-ifneq (,$(filter gnrc_pktbuf_cmd,$(USEMODULE)))
+ifneq (,$(filter shell_cmd_gnrc_pktbuf,$(USEMODULE)))
   ifneq (,$(filter gnrc_pktbuf_static,$(USEMODULE)))
     USEMODULE += od
   endif
