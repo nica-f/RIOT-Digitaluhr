@@ -49,6 +49,14 @@ ifneq (,$(filter congure_reno_methods,$(USEMODULE)))
   USEMODULE += seq
 endif
 
+ifneq (,$(filter crc16_fast,$(USEMODULE)))
+  USEMODULE += checksum
+endif
+
+ifneq (,$(filter crc32_fast,$(USEMODULE)))
+  USEMODULE += checksum
+endif
+
 ifneq (,$(filter eepreg,$(USEMODULE)))
   FEATURES_REQUIRED += periph_eeprom
 endif
@@ -895,6 +903,10 @@ endif
 
 ifneq (,$(filter suit_%,$(USEMODULE)))
   USEMODULE += suit
+endif
+
+ifneq (,$(filter tiny_strerror_as_strerror,$(USEMODULE)))
+  USEMODULE += tiny_strerror
 endif
 
 # include ztimer dependencies

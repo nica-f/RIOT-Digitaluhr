@@ -337,6 +337,32 @@ static const uart_conf_t uart_config[] = {
 #define UART_NUMOF  ARRAY_SIZE(uart_config)
 /** @} */
 
+/**
+ * @name   USB device configuration
+ *
+ * @{
+ */
+
+#include "usbdev_esp32.h"
+
+/**
+ * @brief   Static array with USB OTG FS configuration
+ */
+static const dwc2_usb_otg_fshs_config_t dwc2_usb_otg_fshs_config[] = {
+    {
+        .periph = USB_OTG_FS_PERIPH_BASE,
+        .type = DWC2_USB_OTG_FS,
+        .phy = DWC2_USB_OTG_PHY_BUILTIN,
+    }
+};
+
+/**
+ * @brief Number of USB OTG FS interfaces
+ */
+#define USBDEV_NUMOF    ARRAY_SIZE(dwc2_usb_otg_fshs_config)
+
+/** @} */
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif

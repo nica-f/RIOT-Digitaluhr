@@ -103,12 +103,12 @@ extern "C" {
 #define CONFIG_ESP_SLEEP_RTC_BUS_ISO_WORKAROUND 1
 
 /**
- * ESP32-S2 specific PHY configuration
+ * ESP32-S2 specific USB configuration
  */
-#define CONFIG_USB_OTG_SUPPORTED 0
-#define CONFIG_USB_HOST_CONTROL_TRANSFER_MAX_SIZE 256
-#define CONFIG_USB_HOST_HW_BUFFER_BIAS_BALANCED 1
-
+#ifdef MODULE_ESP_IDF_USB
+#define CONFIG_ESP_PHY_ENABLE_USB               1
+#define CONFIG_USB_OTG_SUPPORTED                1
+#endif
 /**
  * ESP32-S2 specific SPI RAM configuration
  */

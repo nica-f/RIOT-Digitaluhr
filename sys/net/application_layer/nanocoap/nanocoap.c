@@ -454,18 +454,14 @@ ssize_t coap_tree_handler(coap_pkt_t *pkt, uint8_t *resp_buf,
         }
 
         int res = coap_match_path(resource, uri);
-        if (res > 0) {
+        if (res != 0) {
             continue;
         }
-        else if (res < 0) {
-            break;
-        }
-        else {
-            coap_request_ctx_t ctx = {
-                .resource = resource,
-            };
-            return resource->handler(pkt, resp_buf, resp_buf_len, &ctx);
-        }
+
+        coap_request_ctx_t ctx = {
+            .resource = resource,
+        };
+        return resource->handler(pkt, resp_buf, resp_buf_len, &ctx);
     }
 
     return coap_build_reply(pkt, COAP_CODE_404, resp_buf, resp_buf_len, 0);
@@ -533,7 +529,7 @@ ssize_t coap_build_hdr(coap_hdr_t *hdr, unsigned type, uint8_t *token, size_t to
     assert(!(token_len & ~0x1f));
 
     memset(hdr, 0, sizeof(coap_hdr_t));
-    hdr->ver_t_tkl = (0x1 << 6) | (type << 4) | token_len;
+    hdr->ver_t_tkl = (COAP_V1 << 6) | (type << 4) | token_len;
     hdr->code = code;
     hdr->id = htons(id);
 

@@ -772,12 +772,23 @@ static inline bool cpu_woke_from_backup(void)
  * @brief ADC Channel Configuration
  */
 typedef struct {
-    gpio_t pin;             /**< ADC channel pin */
-    uint32_t muxpos;        /**< ADC channel pin multiplexer value */
+    union {
+        uint32_t inputctrl; /**< ADC channel pin multiplexer value  */
+        uint32_t muxpos;    /**< ADC channel pin multiplexer value
+                                 @deprecated, use inputctrl instead */
+    };
 #ifdef ADC0
     Adc *dev;               /**< ADC device descriptor */
 #endif
 } adc_conf_chan_t;
+
+/**
+ * @brief Compatibility define for muxpos struct member
+ *        Unused on all platforms that have DIFFMODE in CTRLB
+ */
+#ifndef ADC_INPUTCTRL_DIFFMODE
+#define ADC_INPUTCTRL_DIFFMODE  (1 << 7)
+#endif
 
 /**
  * @brief Pin that can be used for external voltage reference A

@@ -17,9 +17,9 @@
   - "**/*.mk"
 
 "Area: CI":
-  - ".circleci/**/*"
   - ".github/**/*.yml"
   - ".murdock"
+  - ".murdock.yml"
 
 "Area: CoAP":
   - "sys/net/application_layer/*coap/**/*"
@@ -141,10 +141,6 @@
 
 "Platform: ESP":
   - "cpu/esp*/**/*"
-
-"Platform: MIPS":
-  - "cpu/mips*/**/*"
-  - "makefiles/arch/mips.inc.mk"
 
 "Platform: MSP":
   - "cpu/msp*/**/*"
