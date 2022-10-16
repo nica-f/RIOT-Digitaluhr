@@ -8,6 +8,7 @@ STDIO_MODULES = \
   stdio_semihosting \
   stdio_uart \
   stdio_telnet \
+  stdio_nus \
   #
 
 ifneq (,$(filter newlib picolibc,$(USEMODULE)))
