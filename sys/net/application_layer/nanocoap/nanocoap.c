@@ -80,19 +80,12 @@ int coap_parse(coap_pkt_t *pkt, uint8_t *buf, size_t len)
         return -EBADMSG;
     }
 
-    /* token value (tkl bytes) */
-    if (coap_get_token_len(pkt) == 0) {
-        pkt->token = NULL;
-    }
-    else if (coap_get_token_len(pkt) <= COAP_TOKEN_LENGTH_MAX) {
-        pkt->token = pkt_pos;
-        /* pkt_pos range is validated after options parsing loop below */
-        pkt_pos += coap_get_token_len(pkt);
-    }
-    else {
+    if (coap_get_token_len(pkt) > COAP_TOKEN_LENGTH_MAX) {
         DEBUG("nanocoap: token length invalid\n");
         return -EBADMSG;
     }
+    /* pkt_pos range is validated after options parsing loop below */
+    pkt_pos += coap_get_token_len(pkt);
 
     coap_optpos_t *optpos = pkt->options;
     unsigned option_count = 0;
@@ -360,7 +353,7 @@ ssize_t coap_opt_get_string(coap_pkt_t *pkt, uint16_t optnum,
             target += opt_len;
             left -= (opt_len + 1);
         }
-    } while(opt_pos);
+    } while (opt_pos);
 
     *target = '\0';
 
@@ -513,6 +506,32 @@ ssize_t coap_build_reply(coap_pkt_t *pkt, unsigned code,
         }
     }
 
+    uint32_t no_response;
+    if (coap_opt_get_uint(pkt, COAP_OPT_NO_RESPONSE, &no_response) == 0) {
+
+        const uint8_t no_response_index = (code >> 5) - 1;
+        /* If the handler code misbehaved here, we'd face UB otherwise */
+        assert(no_response_index < 7);
+
+        const uint8_t mask = 1 << no_response_index;
+
+        /* option contains bitmap of disinterest */
+        if (no_response & mask) {
+            switch (coap_get_type(pkt)) {
+            case COAP_TYPE_NON:
+                /* no response and no ACK */
+                return 0;
+            default:
+                 /* There is an immediate ACK response, but it is an empty response */
+                code = COAP_CODE_EMPTY;
+                len = sizeof(coap_hdr_t);
+                tkl = 0;
+                payload_len = 0;
+                break;
+            }
+        }
+    }
+
     coap_build_hdr((coap_hdr_t *)rbuf, type, coap_get_token(pkt), tkl, code,
                    ntohs(pkt->hdr->id));
     coap_hdr_set_type((coap_hdr_t *)rbuf, type);
@@ -544,7 +563,6 @@ void coap_pkt_init(coap_pkt_t *pkt, uint8_t *buf, size_t len, size_t header_len)
 {
     memset(pkt, 0, sizeof(coap_pkt_t));
     pkt->hdr = (coap_hdr_t *)buf;
-    pkt->token = buf + sizeof(coap_hdr_t);
     pkt->payload = buf + header_len;
     pkt->payload_len = len - header_len;
 }

@@ -25,10 +25,8 @@
 #include "net/ethernet.h"
 #include "net/ipv6.h"
 #include "net/gnrc.h"
-#if IS_USED(MODULE_GNRC_IPV6_NIB)
 #include "net/gnrc/ipv6/nib.h"
 #include "net/gnrc/ipv6.h"
-#endif /* IS_USED(MODULE_GNRC_IPV6_NIB) */
 #if IS_USED(MODULE_GNRC_NETIF_PKTQ)
 #include "net/gnrc/netif/pktq.h"
 #endif /* IS_USED(MODULE_GNRC_NETIF_PKTQ) */
@@ -1915,7 +1913,6 @@ static void *_gnrc_netif_thread(void *args)
     gnrc_netif_t *netif;
     int res;
     msg_t reply = { .type = GNRC_NETAPI_MSG_TYPE_ACK };
-    msg_t msg_queue[GNRC_NETIF_MSG_QUEUE_SIZE];
 
     DEBUG("gnrc_netif: starting thread %i\n", thread_getpid());
     netif = ctx->netif;
@@ -1930,7 +1927,7 @@ static void *_gnrc_netif_thread(void *args)
     event_queues_init(netif->evq, GNRC_NETIF_EVQ_NUMOF);
 
     /* setup the link-layer's message queue */
-    msg_init_queue(msg_queue, GNRC_NETIF_MSG_QUEUE_SIZE);
+    msg_init_queue(netif->msg_queue, ARRAY_SIZE(netif->msg_queue));
     /* initialize low-level driver */
     ctx->result = netif->ops->init(netif);
     /* signal that driver init is done */
@@ -2052,14 +2049,20 @@ static void _event_cb(netdev_t *dev, netdev_event_t event)
         DEBUG("gnrc_netif: event triggered -> %i\n", event);
         gnrc_pktsnip_t *pkt = NULL;
         switch (event) {
-#if IS_USED(MODULE_GNRC_IPV6_NIB)
             case NETDEV_EVENT_LINK_UP:
-                gnrc_ipv6_nib_iface_up(netif);
+                if (IS_USED(MODULE_GNRC_IPV6)) {
+                    msg_t msg = { .type = GNRC_IPV6_NIB_IFACE_UP, .content = { .ptr = netif } };
+
+                    msg_send(&msg, gnrc_ipv6_pid);
+                }
                 break;
             case NETDEV_EVENT_LINK_DOWN:
-                gnrc_ipv6_nib_iface_down(netif, false);
+                if (IS_USED(MODULE_GNRC_IPV6)) {
+                    msg_t msg = { .type = GNRC_IPV6_NIB_IFACE_DOWN, .content = { .ptr = netif } };
+
+                    msg_send(&msg, gnrc_ipv6_pid);
+                }
                 break;
-#endif
             case NETDEV_EVENT_RX_COMPLETE:
                 pkt = netif->ops->recv(netif);
                 /* send packet previously queued within netif due to the lower
