@@ -42,6 +42,23 @@ extern "C" {
 #endif
 
 /**
+ * @brief   Clock mux configuration
+ */
+typedef struct {
+    CMU_Clock_TypeDef clk;   /**< Clock domain */
+    CMU_Select_TypeDef src;  /**< Source clock */
+} clk_mux_t;
+
+/**
+ * @brief   Clock divider configuration
+ */
+typedef struct {
+    CMU_Clock_TypeDef clk;   /**< Clock domain */
+    CMU_ClkDiv_TypeDef div;  /**< Divisor */
+} clk_div_t;
+
+#if (defined(ADC_COUNT) && (ADC_COUNT > 0)) || defined(DOXYGEN)
+/**
  * @brief   Internal macro for combining ADC resolution (x) with number of
  *          shifts (y).
  */
@@ -90,6 +107,7 @@ typedef struct {
     ADC_Ref_TypeDef reference;        /**< channel voltage reference */
     ADC_AcqTime_TypeDef acq_time;     /**< channel acquisition time */
 } adc_chan_conf_t;
+#endif
 
 /**
  * @brief   Length of CPU ID in octets.
@@ -125,10 +143,9 @@ typedef struct {
  * @{
  */
 /* RTT_MAX_VALUE some are 24bit, some are 32bit */
-#ifdef _RTC_CNT_MASK
+#if defined(_RTC_CNT_MASK)
 #define RTT_MAX_VALUE       _RTC_CNT_MASK        /* mask has all bits set ==> MAX*/
-#endif
-#ifdef _RTCC_CNT_MASK
+#elif defined(_RTCC_CNT_MASK)
 #define RTT_MAX_VALUE       _RTCC_CNT_MASK       /* mask has all bits set ==> MAX*/
 #endif
 #define RTT_MAX_FREQUENCY   (32768U)             /* in Hz */
@@ -265,7 +282,9 @@ typedef struct {
     I2C_TypeDef *dev;       /**< USART device used */
     gpio_t sda_pin;         /**< pin used for SDA */
     gpio_t scl_pin;         /**< pin used for SCL */
+#if defined(_SILICON_LABS_32B_SERIES_0) || defined(_SILICON_LABS_32B_SERIES_1)
     uint32_t loc;           /**< location of I2C pins */
+#endif
     CMU_Clock_TypeDef cmu;  /**< the device CMU channel */
     IRQn_Type irq;          /**< the devices base IRQ channel */
     uint32_t speed;         /**< the bus speed */
@@ -350,7 +369,9 @@ typedef struct {
     gpio_t mosi_pin;        /**< pin used for MOSI */
     gpio_t miso_pin;        /**< pin used for MISO */
     gpio_t clk_pin;         /**< pin used for CLK */
-    uint32_t loc;           /**< location of USART pins */
+#if defined(_SILICON_LABS_32B_SERIES_0) || defined(_SILICON_LABS_32B_SERIES_1)
+    uint32_t loc;           /**< location of SPI pins */
+#endif
     CMU_Clock_TypeDef cmu;  /**< the device CMU channel */
     IRQn_Type irq;          /**< the devices base IRQ channel */
 } spi_dev_t;
@@ -368,21 +389,33 @@ typedef struct {
 /**
  * @brief   Define timer configuration values
  *
- * @note    The two timers must be adjacent to each other (e.g. TIMER0 and
- *          TIMER1, or TIMER2 and TIMER3, etc.).
+ * @note    For the configuration of series 0 and 1, prescale and actual timer
+ *          must be adjacent to each other (e.g. TIMER0 and TIMER1, or TIMER2
+ *          and TIMER3, etc.).
  * @{
  */
+#if defined(_SILICON_LABS_32B_SERIES_0) || defined(_SILICON_LABS_32B_SERIES_1) || defined(DOXYGEN)
 typedef struct {
     void *dev;              /**< TIMER_TypeDef or LETIMER_TypeDef device used */
     CMU_Clock_TypeDef cmu;  /**< the device CMU channel */
 } timer_dev_t;
+#endif
 
 typedef struct {
+#if defined(_SILICON_LABS_32B_SERIES_0) || defined(_SILICON_LABS_32B_SERIES_1) || defined(DOXYGEN)
     timer_dev_t prescaler;  /**< the lower neighboring timer (not initialized for LETIMER) */
     timer_dev_t timer;      /**< the higher numbered timer */
     IRQn_Type irq;          /**< number of the higher timer IRQ channel */
-    uint8_t channel_numof;       /**< number of channels per timer */
+    uint8_t channel_numof;  /**< number of channels per timer */
+#else
+    void *dev;              /**< TIMER_TypeDef or LETIMER_TypeDef device used */
+    CMU_Clock_TypeDef cmu;  /**< the device CMU channel */
+    IRQn_Type irq;          /**< number of the higher timer IRQ channel */
+#endif
 } timer_conf_t;
+
+#define LETIMER_MAX_VALUE _LETIMER_TOP_MASK  /**< max timer value of LETIMER peripheral */
+#define TIMER_MAX_VALUE _TIMER_TOP_MASK      /**< max timer value of TIMER peripheral */
 /** @} */
 
 /**
@@ -439,7 +472,9 @@ typedef struct {
     void *dev;              /**< UART, USART or LEUART device used */
     gpio_t rx_pin;          /**< pin used for RX */
     gpio_t tx_pin;          /**< pin used for TX */
+#if defined(_SILICON_LABS_32B_SERIES_0) || defined(_SILICON_LABS_32B_SERIES_1) || defined(DOXYGEN)
     uint32_t loc;           /**< location of UART pins */
+#endif
     CMU_Clock_TypeDef cmu;  /**< the device CMU channel */
     IRQn_Type irq;          /**< the devices base IRQ channel */
 } uart_conf_t;
@@ -455,6 +490,15 @@ typedef struct {
 #define PM_NUM_MODES    (3U)
 
 /**
+ * @name   Available power modes
+ * @{
+ */
+#define EFM32_PM_MODE_EM3  (0U)  /**< CPU sleeps, peripherals in EM3 domain are active */
+#define EFM32_PM_MODE_EM2  (1U)  /**< CPU sleeps, peripherals in EM2 + EM3 domain are active */
+#define EFM32_PM_MODE_EM1  (2U)  /**< CPU sleeps, all peripherals are active */
+/** @} */
+
+/**
  * @name    Watchdog timer (WDT) configuration
  * @{
  */
@@ -463,7 +507,7 @@ typedef struct {
 #define NWDT_TIME_LOWER_LIMIT   ((1U << (3U + wdogPeriod_9)) + 1U)
 #define NWDT_TIME_UPPER_LIMIT   ((1U << (3U + wdogPeriod_256k)) + 1U)
 
-#ifdef _SILICON_LABS_32B_SERIES_1
+#if defined(_SILICON_LABS_32B_SERIES_1) || defined(_SILICON_LABS_32B_SERIES_2)
 #define WDT_TIME_LOWER_LIMIT    NWDT_TIME_LOWER_LIMIT
 #define WDT_TIME_UPPER_LIMIT    NWDT_TIME_UPPER_LIMIT
 #endif

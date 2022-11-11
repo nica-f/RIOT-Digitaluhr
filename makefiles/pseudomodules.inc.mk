@@ -230,6 +230,12 @@ PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_ecn_if_in
 PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_ecn_if_out
 PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_ecn_fqueue
 PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_stats
+##
+## @addtogroup net_gnrc_sixlowpan_frag_sfr_congure
+## @{
+##
+PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_congure
+## @}
 PSEUDOMODULES += gnrc_sixlowpan_iphc_nhc
 PSEUDOMODULES += gnrc_sixlowpan_nd_border_router
 PSEUDOMODULES += gnrc_sixlowpan_router_default
@@ -477,6 +483,7 @@ PSEUDOMODULES += suit_transport_%
 PSEUDOMODULES += suit_storage_%
 PSEUDOMODULES += sys_bus_%
 PSEUDOMODULES += tiny_strerror_as_strerror
+PSEUDOMODULES += tiny_strerror_minimal
 PSEUDOMODULES += vdd_lc_filter_%
 ## @defgroup pseudomodule_vfs_auto_format vfs_auto_format
 ## @brief Format mount points at startup unless they can be mounted
