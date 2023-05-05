@@ -6,6 +6,8 @@ BOARD_INSUFFICIENT_MEMORY := \
     arduino-uno \
     atmega328p \
     atmega328p-xplained-mini \
+    atxmega-a1-xplained \
+    atxmega-a1u-xpro \
     bluepill-stm32f030c8 \
     i-nucleo-lrwan1 \
     mega-xplained \
@@ -21,6 +23,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     nucleo-l031k6 \
     nucleo-l053r8 \
     samd10-xmini \
+    seeedstudio-gd32 \
     slstk3400a \
     stk3200 \
     stm32f030f4-demo \
@@ -29,8 +32,6 @@ BOARD_INSUFFICIENT_MEMORY := \
     stm32l0538-disco \
     telosb \
     waspmote-pro \
-    wsn430-v1_3b \
-    wsn430-v1_4 \
     z1 \
     zigduino \
     #

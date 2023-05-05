@@ -41,6 +41,12 @@ extern "C" {
  */
 #define AUTO_INIT_PRIO_MOD_XTIMER                       1030
 #endif
+#ifndef AUTO_INIT_PRIO_WDT_THREAD
+/**
+ * @brief   WDT priority
+ */
+#define AUTO_INIT_PRIO_WDT_THREAD                       1035
+#endif
 #ifndef AUTO_INIT_PRIO_MOD_RANDOM
 /**
  * @brief   RNG priority
@@ -70,6 +76,12 @@ extern "C" {
  * @brief   event thread priority
  */
 #define AUTO_INIT_PRIO_MOD_EVENT_THREAD                 1080
+#endif
+#ifndef AUTO_INIT_PRIO_WDT_EVENT
+/**
+ * @brief   WDT event priority
+ */
+#define AUTO_INIT_PRIO_WDT_EVENT                        1085
 #endif
 #ifndef AUTO_INIT_PRIO_MOD_SYS_BUS
 /**
@@ -160,6 +172,12 @@ extern "C" {
  * @brief   UWB priority
  */
 #define AUTO_INIT_PRIO_MOD_UWB_CORE                     1230
+#endif
+#ifndef AUTO_INIT_PRIO_MOD_GCOAP
+/**
+ * @brief   nanoCoAP server priority
+ */
+#define AUTO_INIT_PRIO_MOD_NANOCOAP                     1235
 #endif
 #ifndef AUTO_INIT_PRIO_MOD_GCOAP
 /**
@@ -364,6 +382,12 @@ extern "C" {
  * @brief   DNS socket priority
  */
 #define AUTO_INIT_PRIO_MOD_DOCK_DNS                     1550
+#endif
+#ifndef AUTO_INIT_PRIO_MOD_GNRC_IPV6_STATIC_ADDR
+/**
+ * @brief   Static network configuration priority
+ */
+#define AUTO_INIT_PRIO_MOD_GNRC_IPV6_STATIC_ADDR        1560
 #endif
 
 #ifdef __cplusplus

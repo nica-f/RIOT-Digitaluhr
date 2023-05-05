@@ -21,7 +21,7 @@
 #ifndef NET_GNRC_IPV6_NIB_CONF_H
 #define NET_GNRC_IPV6_NIB_CONF_H
 
-#include <kernel_defines.h>
+#include "modules.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -136,7 +136,7 @@ extern "C" {
 #if CONFIG_GNRC_IPV6_NIB_ROUTER && \
     (!CONFIG_GNRC_IPV6_NIB_6LR || CONFIG_GNRC_IPV6_NIB_6LBR) && \
     !(IS_USED(MODULE_DHCPV6_CLIENT_IA_PD) || IS_USED(MODULE_GNRC_UHCPC) || \
-      IS_USED(MODULE_GNRC_IPV6_AUTO_SUBNETS))
+      IS_USED(MODULE_GNRC_IPV6_AUTO_SUBNETS) || IS_USED(MODULE_GNRC_IPV6_STATIC_ADDR))
 #define CONFIG_GNRC_IPV6_NIB_ADV_ROUTER               1
 #else
 #define CONFIG_GNRC_IPV6_NIB_ADV_ROUTER               0

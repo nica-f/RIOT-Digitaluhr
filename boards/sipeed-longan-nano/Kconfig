@@ -1,0 +1,50 @@
+# Copyright (c) 2023 Inria
+#
+# This file is subject to the terms and conditions of the GNU Lesser
+# General Public License v2.1. See the file LICENSE in the top level
+# directory for more details.
+#
+
+config BOARD
+    default "sipeed-longan-nano" if BOARD_SIPEED_LONGAN_NANO
+
+config BOARD_SIPEED_LONGAN_NANO
+    bool
+    default y
+    select CPU_MODEL_GD32VF103CBT6
+    select BOARD_HAS_HXTAL
+    select BOARD_HAS_LXTAL
+    select HAS_HIGHLEVEL_STDIO
+    select HAS_PERIPH_ADC
+    select HAS_PERIPH_DAC
+    select HAS_PERIPH_I2C
+    select HAS_PERIPH_PWM
+    select HAS_PERIPH_SPI
+    select HAS_PERIPH_TIMER
+    select HAS_PERIPH_UART
+    select HAS_PERIPH_USBDEV
+    select HAS_RIOTBOOT
+    select HAS_TINYUSB_DEVICE
+    select HAVE_SAUL_GPIO
+
+    select HAVE_MTD_SDCARD_DEFAULT
+    select MODULE_FATFS_VFS if MODULE_VFS_DEFAULT
+    select MODULE_USBUS if TEST_KCONFIG && !PACKAGE_TINYUSB
+    select MODULE_USBUS_CDC_ACM if MODULE_USBUS
+    select MODULE_USB_BOARD_RESET if MODULE_USBUS_CDC_ACM || MODULE_TINYUSB_CLASS_CDC
+
+menu "Sipeed Longan Nano Board Configuration"
+
+    config SIPEED_LONGAN_NANO_WITH_TFT
+        bool "Board with TFT display"
+        help
+            Indicates that a Sipeed Longan Nano board with TFT display is used.
+
+endmenu
+
+choice STDIO_IMPLEMENTATION
+    default MODULE_STDIO_CDC_ACM if MODULE_USBUS
+    default MODULE_STDIO_TINYUSB_CDC_ACM if PACKAGE_TINYUSB
+endchoice
+
+source "$(RIOTBOARD)/common/gd32v/Kconfig"

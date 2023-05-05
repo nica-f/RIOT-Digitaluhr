@@ -19,7 +19,7 @@ config MODULE_IEEE802154_SECURITY
 
 config MODULE_IEEE802154_SUBMAC
     bool "IEEE 802.15.4 submac"
-    select MODULE_XTIMER
+    select ZTIMER_USEC
     help
         This module defines a common layer for handling the lower part of the IEEE 802.15.4 MAC layer.
 
@@ -111,6 +111,10 @@ if KCONFIG_USEMODULE_IEEE802154
     config IEEE802154_AUTO_ACK_DISABLE
         bool "Disable Auto ACK support" if !USEPKG_OPENWSN
         default y if USEPKG_OPENWSN
+
+    config IEEE802154_DEFAULT_ACK_REQ
+        bool "Request ACKs by default"
+        default y
 
 menuconfig KCONFIG_USEMODULE_IEEE802154_SECURITY
     bool "Configure IEEE802.15.4 Security"

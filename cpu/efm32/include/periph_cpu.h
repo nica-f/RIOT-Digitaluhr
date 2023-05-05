@@ -23,6 +23,7 @@
 #include "kernel_defines.h"
 #include "mutex.h"
 
+#include "cpu.h"
 #include "cpu_conf.h"
 
 #if defined(_SILICON_LABS_32B_SERIES_2)
@@ -643,6 +644,11 @@ typedef struct {
 /**
  * @brief   CPU provides own pm_off() function
  */
+#define PROVIDES_PM_OFF
+
+/**
+ * @brief   CPU provides own pm_off() function
+ */
 #define PROVIDES_PM_LAYERED_OFF
 
 /**
@@ -674,6 +680,13 @@ typedef struct {
 #endif
 
 #define WDT_HAS_STOP            (1U)
+/** @} */
+
+/**
+ * @name    USB device definitions
+ * @{
+ */
+#define USBDEV_NUM_ENDPOINTS    7   /**< Number of USB OTG FS endpoints including EP0 */
 /** @} */
 
 /* GPIO_LL's overrides */

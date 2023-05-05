@@ -76,23 +76,17 @@
 
 #include <string.h>
 
+#include "macros/utils.h"
+#include "mutex.h"
 #include "stdio_rtt.h"
 #include "thread.h"
-#include "mutex.h"
 #include "ztimer.h"
-
-#if MODULE_VFS
-#include "vfs.h"
-#endif
 
 /* This parameter affects the bandwidth of both input and output. Decreasing
    it will significantly improve bandwidth at the cost of CPU time. */
 #ifndef STDIO_POLL_INTERVAL_MS
 #define STDIO_POLL_INTERVAL_MS 50U
 #endif
-
-#define MIN(a, b)        (((a) < (b)) ? (a) : (b))
-#define MAX(a, b)        (((a) > (b)) ? (a) : (b))
 
 #ifndef STDIO_TX_BUFSIZE
 #define STDIO_TX_BUFSIZE    (512)
@@ -283,10 +277,6 @@ void stdio_init(void) {
     #ifdef STDIO_RTT_ENABLE_BLOCKING_STDOUT
     blocking_stdout = 1;
     #endif
-
-#if MODULE_VFS
-    vfs_bind_stdio();
-#endif
 
     /* the mutex should start locked */
     mutex_lock(&_rx_mutex);

@@ -122,7 +122,6 @@ endif
 ifneq (,$(filter nrfmin,$(USEMODULE)))
   FEATURES_REQUIRED += radio_nrfmin
   FEATURES_REQUIRED += periph_cpuid
-  USEMODULE += netif
 endif
 
 ifneq (,$(filter nrf24l01p_ng_%,$(USEMODULE)))
@@ -143,10 +142,16 @@ endif
 
 ifneq (,$(filter periph_usbdev_hs_ulpi,$(USEMODULE)))
   FEATURES_REQUIRED += periph_usbdev_hs_ulpi
+  USEMODULE += periph_usbdev_hs
 endif
 
 ifneq (,$(filter periph_usbdev_hs_utmi,$(USEMODULE)))
   FEATURES_REQUIRED += periph_usbdev_hs_utmi
+  USEMODULE += periph_usbdev_hs
+endif
+
+ifneq (,$(filter periph_usbdev_hs,$(USEMODULE)))
+  FEATURES_REQUIRED += periph_usbdev_hs
 endif
 
 ifneq (,$(filter pn532_i2c,$(USEMODULE)))
@@ -169,6 +174,10 @@ endif
 
 ifneq (,$(filter sdp3x_%,$(USEMODULE)))
   USEMODULE += sdp3x
+endif
+
+ifneq (,$(filter servo_%,$(USEMODULE)))
+  USEMODULE += servo
 endif
 
 ifneq (,$(filter sht1%,$(USEMODULE)))
@@ -216,6 +225,10 @@ ifneq (,$(filter vcnl40%0,$(USEMODULE)))
   USEMODULE += vcnl40x0
 endif
 
+ifneq (,$(filter vl6180x_%,$(USEMODULE)))
+  USEMODULE += vl6180x
+endif
+
 ifneq (,$(filter ws281x_%,$(USEMODULE)))
   USEMODULE += ws281x
 endif
@@ -252,6 +265,10 @@ endif
 
 ifneq (,$(filter periph_timer_periodic,$(USEMODULE)))
   FEATURES_REQUIRED += periph_timer
+endif
+
+ifneq (,$(filter periph_wdt_auto_start,$(USEMODULE)))
+  FEATURES_REQUIRED += periph_wdt
 endif
 
 ifneq (,$(filter-out netdev_default netdev_new_api netdev_legacy_api, $(filter netdev_%,$(USEMODULE))))

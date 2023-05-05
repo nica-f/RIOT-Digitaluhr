@@ -8,9 +8,11 @@ STDIO_MODULES = \
   stdio_rtt \
   stdio_semihosting \
   stdio_uart \
+  stdio_udp \
   stdio_telnet \
   stdio_tinyusb_cdc_acm \
   stdio_nus \
+  stdio_usb_serial_jtag \
   #
 
 # select stdio_uart if no other stdio module is slected
@@ -75,9 +77,13 @@ ifneq (,$(filter stdio_telnet,$(USEMODULE)))
   USEMODULE += telnet
 endif
 
+ifneq (,$(filter stdio_udp,$(USEMODULE)))
+  USEMODULE += sock_udp
+endif
+
 # enable stdout buffering for modules that benefit from sending out buffers in larger chunks
 ifneq (,$(filter picolibc,$(USEMODULE)))
-  ifneq (,$(filter stdio_cdc_acm stdio_ethos slipdev_stdio stdio_semihosting,$(USEMODULE)))
+  ifneq (,$(filter stdio_cdc_acm stdio_ethos slipdev_stdio stdio_semihosting stdio_tinyusb_cdc_acm,$(USEMODULE)))
     USEMODULE += picolibc_stdout_buffered
   endif
 endif

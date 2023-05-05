@@ -24,6 +24,23 @@ ifneq (,$(filter auto_init_gnrc_netif,$(USEMODULE)))
   USEMODULE += gnrc_netif_init_devs
 endif
 
+ifneq (,$(filter auto_init_wdt_thread,$(USEMODULE)))
+  USEMODULE += periph_wdt_auto_start
+  USEMODULE += ztimer_msec
+
+  # we can only have either auto_init_wdt_event or auto_init_wdt_thread
+  ifneq (,$(filter auto_init_wdt_event,$(USEMODULE)))
+    $(error auto_init_wdt_event and auto_init_wdt_thread are mutually exclusive)
+  endif
+endif
+
+ifneq (,$(filter auto_init_wdt_event,$(USEMODULE)))
+  USEMODULE += event_periodic_callback
+  USEMODULE += event_thread
+  USEMODULE += periph_wdt_auto_start
+  USEMODULE += ztimer_msec
+endif
+
 ifneq (,$(filter auto_init_sock_dns,$(USEMODULE)))
   ifneq (,$(filter ipv4,$(USEMODULE)))
     USEMODULE += ipv4_addr
@@ -31,6 +48,10 @@ ifneq (,$(filter auto_init_sock_dns,$(USEMODULE)))
   ifneq (,$(filter ipv6,$(USEMODULE)))
     USEMODULE += ipv6_addr
   endif
+endif
+
+ifneq (,$(filter coding,$(USEMODULE)))
+  USEMODULE += bitfield
 endif
 
 ifneq (,$(filter congure_%,$(USEMODULE)))
@@ -188,6 +209,7 @@ ifneq (,$(filter netdev_ieee802154_submac,$(USEMODULE)))
   USEMODULE += netdev_legacy_api
   USEMODULE += ieee802154
   USEMODULE += ieee802154_submac
+  USEMODULE += ztimer_usec
 endif
 
 ifneq (,$(filter uhcpc,$(USEMODULE)))
@@ -203,12 +225,7 @@ endif
 
 ifneq (,$(filter trickle,$(USEMODULE)))
   USEMODULE += random
-  ifeq (,$(filter ztimer_msec,$(USEMODULE)))
-    USEMODULE += xtimer
-    ifneq (,$(filter ztimer_xtimer_compat,$(USEMODULE)))
-      USEMODULE += ztimer_msec
-    endif
-  endif
+  USEMODULE += ztimer_msec
 endif
 
 ifneq (,$(filter eui_provider,$(USEMODULE)))
@@ -231,7 +248,7 @@ ifneq (,$(filter ipv6_hdr,$(USEMODULE)))
 endif
 
 ifneq (,$(filter ieee802154_submac,$(USEMODULE)))
-  USEMODULE += xtimer
+  USEMODULE += ztimer_usec
   USEMODULE += random
 endif
 
@@ -317,8 +334,22 @@ ifneq (,$(filter random_cmd,$(USEMODULE)))
   USEMODULE += shell_cmd_random
 endif
 
-ifneq (,$(filter shell%,$(USEMODULE)))
-  USEMODULE += stdin
+ifneq (,$(filter shell_commands,$(USEMODULE)))
+  # shell_commands has been renamed to shell_cmds_default, but let's keep this
+  # for backward compatibility
+  USEMODULE += shell_cmds_default
+endif
+
+ifneq (,$(filter shell_cmd%,$(USEMODULE)))
+  # each and every command is a submodule of shell_cmds
+  USEMODULE += shell_cmds
+endif
+
+ifneq (,$(filter shell_cmds,$(USEMODULE)))
+  USEMODULE += shell
+endif
+
+ifneq (,$(filter shell,$(USEMODULE)))
   include $(RIOTBASE)/sys/shell/Makefile.dep
 endif
 
@@ -392,9 +423,15 @@ ifneq (,$(filter log_%,$(USEMODULE)))
   USEMODULE += log
 endif
 
+ifneq (,$(filter log_color,$(USEMODULE)))
+  # log_color fails to compile with -Wformat-nonliteral but this is required
+  # for the wrapped stdio that pushes the format string into progmem
+  FEATURES_BLACKLIST += arch_avr8
+endif
+
 ifneq (,$(filter cpp11-compat,$(USEMODULE)))
   USEMODULE += cpp_new_delete
-  USEMODULE += xtimer
+  USEMODULE += ztimer64_usec
   USEMODULE += timex
   FEATURES_REQUIRED += cpp
   FEATURES_REQUIRED += libstdcpp
@@ -712,6 +749,20 @@ ifneq (,$(filter luid,$(USEMODULE)))
   FEATURES_OPTIONAL += periph_cpuid
 endif
 
+ifneq (,$(filter nanocoap_dtls,$(USEMODULE)))
+  USEMODULE += sock_dtls
+  USEPKG += tinydtls
+endif
+
+ifneq (,$(filter nanocoap_server_auto_init,$(USEMODULE)))
+  USEMODULE += nanocoap_server
+endif
+
+ifneq (,$(filter nanocoap_server,$(USEMODULE)))
+  USEMODULE += nanocoap_resources
+  USEMODULE += nanocoap_sock
+endif
+
 ifneq (,$(filter nanocoap_sock,$(USEMODULE)))
   USEMODULE += sock_udp
   USEMODULE += sock_util
@@ -721,6 +772,10 @@ endif
 ifneq (,$(filter nanocoap_cache,$(USEMODULE)))
   USEMODULE += ztimer_sec
   USEMODULE += hashes
+endif
+
+ifneq (,$(filter nanocoap_link_format,$(USEMODULE)))
+  USEMODULE += fmt
 endif
 
 ifneq (,$(filter nanocoap_vfs,$(USEMODULE)))
@@ -773,7 +828,7 @@ endif
 
 ifneq (,$(filter cord_ep_standalone,$(USEMODULE)))
   USEMODULE += cord_ep
-  USEMODULE += xtimer
+  USEMODULE += ztimer_msec
 endif
 
 ifneq (,$(filter cord_lc,$(USEMODULE)))
@@ -800,6 +855,7 @@ ifneq (,$(filter usbus_cdc_ecm,$(USEMODULE)))
   USEMODULE += iolist
   USEMODULE += fmt
   USEMODULE += usbus
+  USEMODULE += usbus_urb
   USEMODULE += netdev_eth
   USEMODULE += luid
 endif
@@ -817,6 +873,12 @@ endif
 
 ifneq (,$(filter ut_process,$(USEMODULE)))
   USEMODULE += fmt
+endif
+
+ifneq (,$(filter usbus_msc,$(USEMODULE)))
+  USEMODULE += usbus
+  USEMODULE += mtd
+  USEMODULE += mtd_write_page
 endif
 
 ifneq (,$(filter uuid,$(USEMODULE)))
@@ -857,6 +919,10 @@ ifneq (,$(filter riotboot_usb_dfu, $(USEMODULE)))
   USEMODULE += ztimer_sec
   FEATURES_REQUIRED += no_idle_thread
   FEATURES_REQUIRED += periph_pm
+endif
+
+ifneq (,$(filter riotboot_tinyusb_dfu, $(USEMODULE)))
+  USEPKG += tinyusb
 endif
 
 ifneq (,$(filter irq_handler,$(USEMODULE)))
@@ -1004,6 +1070,10 @@ endif
 
 ifneq (,$(filter auto_init%,$(USEMODULE)))
   USEMODULE += preprocessor_successor
+endif
+
+ifneq (,$(filter uri_parser,$(USEMODULE)))
+  USEMODULE += fmt
 endif
 
 include $(RIOTBASE)/sys/test_utils/Makefile.dep

@@ -5,20 +5,9 @@ USEMODULE += hashes
 USEMODULE += random
 USEMODULE += tinydtls_aes
 USEMODULE += tinydtls_ecc
-USEMODULE += ztimer64_msec
-
-# TinyDTLS only has support for 32-bit architectures ATM
-FEATURES_REQUIRED += arch_32bit
+USEMODULE += ztimer_msec
 
 ifneq (,$(filter sock_dtls,$(USEMODULE)))
   USEMODULE += tinydtls_sock_dtls
   USEMODULE += ztimer_usec
-endif
-
-ifneq (,$(filter newlib_syscalls_default,$(USEMODULE)))
-  USEMODULE += libc_gettimeofday
-endif
-
-ifneq (,$(filter native,$(CPU)))
-  USEMODULE += libc_gettimeofday
 endif

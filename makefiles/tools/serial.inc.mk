@@ -3,9 +3,17 @@ ifeq (1,$(MOST_RECENT_PORT))
   ifneq (,$(filter stdio_cdc_acm,$(USEMODULE)))
     TTY_BOARD_FILTER ?= --model $(BOARD) --vendor 'RIOT-os\.org'
   endif
-  TTYS_FLAGS := --most-recent --format path $(TTY_BOARD_FILTER)
-  PORT_DETECTED := $(shell $(RIOTTOOLS)/usb-serial/ttys.py $(TTYS_FLAGS))
-  PORT ?= $(PORT_DETECTED)
+  TTY_SELECT_CMD ?= $(RIOTTOOLS)/usb-serial/ttys.py \
+                    --most-recent \
+                    --format path serial \
+                    $(TTY_BOARD_FILTER)
+  TTY_DETECTED := $(shell $(TTY_SELECT_CMD) || echo 'no-tty-detected no-serial-detected')
+  PORT_DETECTED := $(firstword $(TTY_DETECTED))
+  PORT_SERIAL_DETECTED := $(lastword $(TTY_DETECTED))
+  PORT ?= $(firstword $(TTY_DETECTED))
+  ifeq (1,$(DEBUG_ADAPTER_ID_IS_TTY_SERIAL))
+    DEBUG_ADAPTER_ID ?= $(PORT_SERIAL_DETECTED)
+  endif
 endif
 # Otherwise, use as default the most commonly used ports on Linux and OSX
 PORT_LINUX ?= /dev/ttyACM0
@@ -45,7 +53,13 @@ else ifeq ($(RIOT_TERMINAL),picocom)
   TERMPROG  ?= picocom
   TERMFLAGS ?= --nolock --imap lfcrlf --baud "$(BAUD)" "$(PORT)"
 else ifeq ($(RIOT_TERMINAL),miniterm)
-  TERMPROG  ?= miniterm.py
+  # Check if miniterm.py is available in the path, if not use just miniterm
+  # since new versions will only have miniterm and not miniterm.py
+  ifeq (,$(shell command -v miniterm.py 2>/dev/null))
+    TERMPROG ?= miniterm
+  else
+    TERMPROG ?= miniterm.py
+  endif
   # The RIOT shell will still transmit back a CRLF, but at least with --eol LF
   # we avoid sending two lines on every "enter".
   TERMFLAGS ?= --eol LF "$(PORT)" "$(BAUD)" $(MINITERMFLAGS)

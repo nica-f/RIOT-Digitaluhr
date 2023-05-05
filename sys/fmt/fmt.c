@@ -27,6 +27,7 @@
 
 #include "kernel_defines.h"
 #include "fmt.h"
+#include "stdio_base.h"
 
 static const char _hex_chars[16] = "0123456789ABCDEF";
 
@@ -470,14 +471,13 @@ uint32_t scn_u32_dec(const char *str, size_t n)
     uint32_t res = 0;
 
     while (n--) {
-        char c = *str++;
-        if (!fmt_is_digit(c)) {
+        unsigned c = *str++;
+        unsigned d = c - (unsigned)'0';
+        if ( !( '0'<= c && c <= '9') ) {
             break;
         }
-        else {
-            res *= 10;
-            res += (c - '0');
-        }
+        res *= 10U;
+        res += d;
     }
     return res;
 }
@@ -487,44 +487,45 @@ uint32_t scn_u32_hex(const char *str, size_t n)
     uint32_t res = 0;
 
     while (n--) {
-        char c = *str++;
-        if (!fmt_is_digit(c)) {
-            if (fmt_is_upper(c)) {
-                c = _to_lower(c);
-            }
-            if (c == '\0' || c > 'f') {
-                break;
-            }
-            res <<= 4;
-            res |= c - 'a' + 0xa;
+        unsigned c = *str++;
+        unsigned d;
+        if (('0'<= c) && (c <= '9')){
+            d = c - (unsigned)'0';
+        }
+        else if (('A' <= c) && (c <= 'F')) {
+            d = c - (unsigned)'A' + 0xaU;
+        }
+        else if (('a' <= c) && (c <= 'f')) {
+            d = c - (unsigned)'a' + 0xaU;
         }
         else {
-            res <<= 4;
-            res |= c - '0';
+            break;
         }
+        res <<= 4U;
+        res |= d;
+
     }
     return res;
 }
 
+/* native gets special treatment as native's stdio code is ... special.
+ * And when not building for RIOT, there's no `stdio_write()`.
+ * In those cases, just defer to `printf()`.
+ */
+#if IS_USED(MODULE_STDIO_NATIVE) || !defined(RIOT_VERSION)
 void print(const char *s, size_t n)
 {
-    if (IS_USED(MODULE_STDIO_NATIVE)) {
-        /* native gets special treatment as native's stdio code is ...
-         * special */
-        printf("%.*s", (int)n, s);
-        return;
-    }
-
-    while (n > 0) {
-        ssize_t written;
-        written = fwrite(s, 1, n, stdout);
-        if (written < 0) {
-            break;
-        }
-        n -= written;
-        s += written;
-    }
+    printf("%.*s", (int)n, s);
 }
+#else
+void print(const char *s, size_t n)
+{
+    /* flush the libc's output buffer so output is not intermingled. */
+    fflush(stdout);
+
+    stdio_write(s, n);
+}
+#endif
 
 void print_u32_dec(uint32_t val)
 {

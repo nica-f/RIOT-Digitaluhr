@@ -21,12 +21,30 @@
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "bitarithm.h"
 #include "mtd.h"
+
+static bool out_of_bounds(mtd_dev_t *mtd, uint32_t page, uint32_t offset, uint32_t len)
+{
+    const uint32_t page_shift = bitarithm_msb(mtd->page_size);
+    const uint32_t pages_numof = mtd->sector_count * mtd->pages_per_sector;
+
+    /* 2 TiB SD cards might be a problem */
+    assert(pages_numof >= mtd->sector_count);
+
+    /* read n byte buffer -> last byte will be at n - 1 */
+    page += (offset + len - 1) >> page_shift;
+    if (page >= pages_numof) {
+        return true;
+    }
+
+    return false;
+}
 
 int mtd_init(mtd_dev_t *mtd)
 {
@@ -70,6 +88,10 @@ int mtd_read(mtd_dev_t *mtd, void *dest, uint32_t addr, uint32_t count)
         return -ENODEV;
     }
 
+    if (out_of_bounds(mtd, 0, addr, count)) {
+        return -EOVERFLOW;
+    }
+
     if (mtd->driver->read) {
         return mtd->driver->read(mtd, dest, addr, count);
     }
@@ -86,6 +108,10 @@ int mtd_read_page(mtd_dev_t *mtd, void *dest, uint32_t page, uint32_t offset,
 {
     if (!mtd || !mtd->driver) {
         return -ENODEV;
+    }
+
+    if (out_of_bounds(mtd, page, offset, count)) {
+        return -EOVERFLOW;
     }
 
     if (mtd->driver->read_page == NULL) {
@@ -139,6 +165,10 @@ int mtd_write(mtd_dev_t *mtd, const void *src, uint32_t addr, uint32_t count)
         return -ENODEV;
     }
 
+    if (out_of_bounds(mtd, 0, addr, count)) {
+        return -EOVERFLOW;
+    }
+
     if (mtd->driver->write) {
         return mtd->driver->write(mtd, src, addr, count);
     }
@@ -183,6 +213,12 @@ static size_t _write_sector(mtd_dev_t *mtd, const void *data, uint32_t sector,
         len = sector_size - offset;
     }
 
+    /* fast path: skip reading the sector if we overwrite it completely */
+    if (offset == 0 && len == sector_size) {
+        work = (void *)data;
+        goto write;
+    }
+
     /* copy sector to RAM */
     res = mtd_read_page(mtd, work, sector_page, 0, sector_size);
     if (res < 0) {
@@ -198,6 +234,7 @@ static size_t _write_sector(mtd_dev_t *mtd, const void *data, uint32_t sector,
     /* modify sector in RAM */
     memcpy(work + offset, data, len);
 
+write:
     /* write back modified sector copy */
     res = mtd_write_page_raw(mtd, work, sector_page, 0, sector_size);
     if (res < 0) {
@@ -212,6 +249,10 @@ int mtd_write_page(mtd_dev_t *mtd, const void *data, uint32_t page,
 {
     if (!mtd || !mtd->driver) {
         return -ENODEV;
+    }
+
+    if (out_of_bounds(mtd, page, offset, len)) {
+        return -EOVERFLOW;
     }
 
     if (mtd->driver->flags & MTD_DRIVER_FLAG_DIRECT_WRITE) {
@@ -245,6 +286,10 @@ int mtd_write_page_raw(mtd_dev_t *mtd, const void *src, uint32_t page, uint32_t 
 {
     if (!mtd || !mtd->driver) {
         return -ENODEV;
+    }
+
+    if (out_of_bounds(mtd, page, offset, count)) {
+        return -EOVERFLOW;
     }
 
     if (mtd->driver->write_page == NULL) {
@@ -321,7 +366,11 @@ int mtd_erase_sector(mtd_dev_t *mtd, uint32_t sector, uint32_t count)
         return -ENODEV;
     }
 
-    if (sector >= mtd->sector_count) {
+    if (sector + count > mtd->sector_count) {
+        return -EOVERFLOW;
+    }
+
+    if (sector + count < sector) {
         return -EOVERFLOW;
     }
 

@@ -14,6 +14,7 @@
  *
  * @author          Koen Zandberg <koen@bergzand.net>
  */
+#include "kernel_init.h"
 #include "stdio_uart.h"
 #include "periph/init.h"
 #include "irq_arch.h"
@@ -28,8 +29,10 @@ extern void __libc_init_array(void);
 void cpu_init(void)
 {
     gd32vf103_clock_init();
+    /* enable PMU required for pm_layered */
+    periph_clk_en(APB1, RCU_APB1EN_PMUEN_Msk);
     /* Common RISC-V initialization */
     riscv_init();
-    stdio_init();
+    early_init();
     periph_init();
 }

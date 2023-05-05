@@ -22,6 +22,7 @@ config BOARD_STM32F723E_DISCO
     select HAS_PERIPH_UART
     select HAS_PERIPH_UART_HW_FC
     select HAS_PERIPH_USBDEV
+    select HAS_PERIPH_USBDEV_HS
     select HAS_PERIPH_USBDEV_HS_UTMI
 
     # Put other features for this board (in alphabetical order)
@@ -33,7 +34,7 @@ config BOARD_STM32F723E_DISCO
 
     select HAVE_SAUL_GPIO
     select HAVE_FT5X06
-    select MODULE_PERIPH_UART_HW_FC if TEST_KCONFIG && HAS_PERIPH_UART_HW_FC
+    select MODULE_PERIPH_UART_HW_FC if TEST_KCONFIG && HAS_PERIPH_UART_HW_FC && MODULE_PERIPH_UART
     # Workaround due to stdout only working with stdin enabled
     select MODULE_STDIN if TEST_KCONFIG
 

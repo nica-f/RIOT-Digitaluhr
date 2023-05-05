@@ -76,6 +76,7 @@ PSEUDOMODULES += fatfs_vfs_format
 PSEUDOMODULES += fmt_%
 PSEUDOMODULES += gcoap_forward_proxy
 PSEUDOMODULES += gcoap_fileserver
+PSEUDOMODULES += gcoap_fileserver_callback
 PSEUDOMODULES += gcoap_fileserver_delete
 PSEUDOMODULES += gcoap_fileserver_put
 PSEUDOMODULES += gcoap_dtls
@@ -235,6 +236,30 @@ PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_stats
 ## @{
 ##
 PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_congure
+## @defgroup net_gnrc_sixlowpan_frag_sfr_congure_abe gnrc_sixlowpan_frag_sfr_congure_abe: TCP Reno with ABE
+## @brief  Congestion control for SFR using the [TCP Reno congestion control algorithm with ABE](@ref sys_congure_abe)
+##
+## Provides an Alternative Backoff with Explicit Content Notification (ABE) to TCP-Reno-based congestion
+## control
+## @{
+PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_congure_abe
+## @}
+## @defgroup net_gnrc_sixlowpan_frag_sfr_congure_reno gnrc_sixlowpan_frag_sfr_congure_reno: TCP Reno
+## @brief  Congestion control for SFR using the [TCP Reno congestion control algorithm](@ref sys_congure_reno)
+## @{
+PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_congure_reno
+## @}
+## @defgroup net_gnrc_sixlowpan_frag_sfr_congure_quic gnrc_sixlowpan_frag_sfr_congure_quic: QUIC CC
+## @brief  Congestion control for SFR using the [congestion control algorithm of QUIC](@ref sys_congure_quic)
+## @{
+PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_congure_quic
+## @}
+## @defgroup net_gnrc_sixlowpan_frag_sfr_congure_sfr gnrc_sixlowpan_frag_sfr_congure_sfr: Appendix C
+## @brief  Basic congestion control for 6LoWPAN SFR as proposed in Appendix C of RFC 8931
+## @see    [RFC 8931, Appendix C](https://tools.ietf.org/html/rfc8931#section-appendix.c)
+## @{
+PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_congure_sfr
+## @}
 ## @}
 PSEUDOMODULES += gnrc_sixlowpan_iphc_nhc
 PSEUDOMODULES += gnrc_sixlowpan_nd_border_router
@@ -272,6 +297,11 @@ PSEUDOMODULES += l2filter_whitelist
 PSEUDOMODULES += libstdcpp
 PSEUDOMODULES += log
 PSEUDOMODULES += lora
+PSEUDOMODULES += lwext4_no_gpl
+PSEUDOMODULES += lwext2_vfs
+PSEUDOMODULES += lwext3_vfs
+PSEUDOMODULES += lwext4_vfs
+PSEUDOMODULES += lwext4_vfs_format
 ## @defgroup pseudomodule_libc_gettimeofday libc_gettimeofday
 ## @brief Includes implementation of gettimeofday()
 ##
@@ -383,6 +413,21 @@ PSEUDOMODULES += semtech_loramac_rx
 PSEUDOMODULES += senml_cbor
 PSEUDOMODULES += senml_phydat
 PSEUDOMODULES += senml_saul
+## @defgroup drivers_servo_pwm PWM based servo driver
+## @ingroup drivers_servo
+## @{
+PSEUDOMODULES += servo_pwm
+## @}
+## @defgroup drivers_servo_timer periph_timer_periodic based servo driver
+## @ingroup drivers_servo
+## @{
+PSEUDOMODULES += servo_timer
+## @}
+## @defgroup drivers_servo_saul SAUL integration of the servo driver
+## @ingroup drivers_servo
+## @{
+PSEUDOMODULES += servo_saul
+## @}
 ## @defgroup pseudomodule_sha1sum sha1sum
 ## @ingroup sys_shell_commands
 ## @{
@@ -489,6 +534,7 @@ PSEUDOMODULES += suit_storage_%
 PSEUDOMODULES += sys_bus_%
 PSEUDOMODULES += tiny_strerror_as_strerror
 PSEUDOMODULES += tiny_strerror_minimal
+PSEUDOMODULES += usbus_urb
 PSEUDOMODULES += vdd_lc_filter_%
 ## @defgroup pseudomodule_vfs_auto_format vfs_auto_format
 ## @brief Format mount points at startup unless they can be mounted
@@ -580,6 +626,7 @@ PSEUDOMODULES += crypto_aes_unroll
 
 # declare shell version of test_utils_interactive_sync
 PSEUDOMODULES += test_utils_interactive_sync_shell
+PSEUDOMODULES += test_utils_main_exit_cb
 
 # All auto_init modules are pseudomodules
 PSEUDOMODULES += auto_init_%
@@ -589,6 +636,8 @@ NO_PSEUDOMODULES += auto_init_multimedia
 NO_PSEUDOMODULES += auto_init_security
 NO_PSEUDOMODULES += auto_init_usbus
 NO_PSEUDOMODULES += auto_init_screen
+NO_PSEUDOMODULES += auto_init_wdt_event
+NO_PSEUDOMODULES += auto_init_wdt_thread
 
 # Packages and drivers may also add modules to PSEUDOMODULES in their `Makefile.include`.
 

@@ -59,6 +59,9 @@
 
 #else /* defined(MCU_ESP8266) */
 
+#include "driver/periph_ctrl.h"
+#include "esp_rom_gpio.h"
+#include "esp_rom_uart.h"
 #include "hal/interrupt_controller_types.h"
 #include "hal/interrupt_controller_ll.h"
 #include "soc/gpio_reg.h"
@@ -67,10 +70,9 @@
 #include "soc/periph_defs.h"
 #include "soc/rtc.h"
 #include "soc/soc_caps.h"
+#include "soc/uart_pins.h"
 #include "soc/uart_reg.h"
 #include "soc/uart_struct.h"
-
-#include "esp_idf_api/periph_ctrl.h"
 
 #undef  UART_CLK_FREQ
 #define UART_CLK_FREQ   rtc_clk_apb_freq_get() /* APB_CLK is used */
@@ -164,23 +166,22 @@ int uart_init(uart_t uart, uint32_t baudrate, uart_rx_cb_t rx_cb, void *arg)
     assert(uart < UART_NUMOF_MAX);
     assert(uart < UART_NUMOF);
 
-    /* UART1 and UART2 have configurable pins */
-    if ((UART_NUMOF > 1 && uart == UART_DEV(1)) ||
-        (UART_NUMOF > 2 && uart == UART_DEV(2))) {
+#ifndef MCU_ESP8266
+    assert(uart_config[uart].txd != GPIO_UNDEF);
+    assert(uart_config[uart].rxd != GPIO_UNDEF);
 
-        /* reset the pins when they were already used as UART pins */
-        if (gpio_get_pin_usage(uart_config[uart].txd) == _UART) {
-            gpio_set_pin_usage(uart_config[uart].txd, _GPIO);
-        }
-        if (gpio_get_pin_usage(uart_config[uart].rxd) == _UART) {
-            gpio_set_pin_usage(uart_config[uart].rxd, _GPIO);
-        }
+    /* don't reinitialize the pins if they are already configured as UART pins */
+    if ((gpio_get_pin_usage(uart_config[uart].txd) != _UART) ||
+        (gpio_get_pin_usage(uart_config[uart].rxd) != _UART)) {
 
-        /* try to initialize the pins as GPIOs first */
-        if ((uart_config[uart].txd != GPIO_UNDEF &&
-             gpio_init(uart_config[uart].txd, GPIO_OUT)) ||
-            (uart_config[uart].rxd != GPIO_UNDEF &&
-             gpio_init(uart_config[uart].rxd, GPIO_IN))) {
+        /* try to initialize the pins where the TX line is set and temporarily
+         * configured as a pull-up open-drain output before configuring it as
+         * a push-pull output to avoid a several msec long LOW pulse resulting
+         * in some garbage */
+        gpio_set(uart_config[uart].txd);
+        if (gpio_init(uart_config[uart].txd, GPIO_OD_PU) ||
+            gpio_init(uart_config[uart].txd, GPIO_OUT) ||
+            gpio_init(uart_config[uart].rxd, GPIO_IN_PU)) {
             return -1;
         }
 
@@ -188,29 +189,14 @@ int uart_init(uart_t uart, uint32_t baudrate, uart_rx_cb_t rx_cb, void *arg)
         gpio_set_pin_usage(uart_config[uart].txd, _UART);
         gpio_set_pin_usage(uart_config[uart].rxd, _UART);
 
-#ifdef MCU_ESP8266
-        if (uart_config[uart].txd != GPIO_UNDEF) {
-            uint8_t mux = _gpio_to_iomux[uart_config[uart].txd];
-            IOMUX.PIN[mux] = (IOMUX.PIN[mux] & ~IOMUX_PIN_FUNC_MASK) |
-                             IOMUX_FUNC(uart_config[uart].txd == GPIO2 ? 2 : 4);
-        }
-        if (uart_config[uart].rxd != GPIO_UNDEF) {
-            /* There's really only GPIO8 / FUNC(4) for this, but it is normally
-             * unusable because it is used by the internal flash. */
-            uint8_t mux = _gpio_to_iomux[uart_config[uart].rxd];
-            IOMUX.PIN[mux] = (IOMUX.PIN[mux] & ~IOMUX_PIN_FUNC_MASK) |
-                             IOMUX_FUNC(4);
-        }
-#else /* MCU_ESP8266 */
-        /* connect TxD pin to the TxD output signal through the GPIO matrix */
-        GPIO.func_out_sel_cfg[uart_config[uart].txd].func_sel = _uarts[uart].signal_txd;
-
-        /* connect RxD input signal to the RxD pin through the GPIO matrix */
-        GPIO.func_in_sel_cfg[_uarts[uart].signal_rxd].sig_in_sel = 1;
-        GPIO.func_in_sel_cfg[_uarts[uart].signal_rxd].sig_in_inv = 0;
-        GPIO.func_in_sel_cfg[_uarts[uart].signal_rxd].func_sel = uart_config[uart].rxd;
-#endif /* MCU_ESP8266 */
+        esp_rom_uart_tx_wait_idle(uart);
+        esp_rom_gpio_connect_out_signal(uart_config[uart].txd,
+                                        _uarts[uart].signal_txd, false, false);
+        esp_rom_gpio_connect_in_signal(uart_config[uart].rxd,
+                                       _uarts[uart].signal_rxd, false);
     }
+#endif /* MCU_ESP8266 */
+
     _uarts[uart].baudrate = baudrate;
 
     /* register interrupt context */
@@ -245,7 +231,7 @@ void uart_poweron(uart_t uart)
     assert(uart < UART_NUMOF);
 
 #ifndef MCU_ESP8266
-    esp_idf_periph_module_enable(_uarts[uart].mod);
+    periph_module_enable(_uarts[uart].mod);
 #endif
     _uart_config(uart);
 }
@@ -255,7 +241,7 @@ void uart_poweroff(uart_t uart)
     assert(uart < UART_NUMOF);
 
 #ifndef MCU_ESP8266
-    esp_idf_periph_module_disable(_uarts[uart].mod);
+    periph_module_disable(_uarts[uart].mod);
 #endif
 }
 
@@ -266,6 +252,18 @@ void uart_system_init(void)
         /* reset all UART interrupt status registers */
         _uarts[uart].regs->int_clr.val = ~0;
     }
+#ifndef MCU_ESP8266
+    /* reset the pin usage of the default UART0 pins to GPIO to allow
+     * reinitialization and usage for other purposes */
+    gpio_set_pin_usage(U0TXD_GPIO_NUM, _GPIO);
+    gpio_set_pin_usage(U0RXD_GPIO_NUM, _GPIO);
+#if defined(CONFIG_CONSOLE_UART_TX) && defined(CONFIG_CONSOLE_UART_TX)
+    /* reset the pin usage of the UART pins used by the bootloader to
+     * _GPIO to be able to use them later for other purposes */
+    gpio_set_pin_usage(CONFIG_CONSOLE_UART_TX, _GPIO);
+    gpio_set_pin_usage(CONFIG_CONSOLE_UART_RX, _GPIO);
+#endif
+#endif
 }
 
 void uart_print_config(void)

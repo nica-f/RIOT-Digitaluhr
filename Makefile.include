@@ -235,7 +235,7 @@ GLOBAL_GOALS += buildtest \
                 info-boards-features-missing \
                 info-boards-supported \
                 info-buildsizes info-buildsizes-diff \
-                create-Makefile.ci \
+                generate-Makefile.ci \
                 #
 
 ifneq (, $(filter $(GLOBAL_GOALS), $(MAKECMDGOALS)))
@@ -460,6 +460,11 @@ else
   # process dependencies
   include $(RIOTMAKE)/dependency_resolution.inc.mk
 endif
+
+# Include dfu-util configuration when using riotboot_dfu bootloader before
+# including the board's Makefile.include which could define dfu-util
+# configuration for other DFU bootloaders in use.
+include $(RIOTMAKE)/boot/riotboot_dfu-util.mk
 
 # Include Board and CPU configuration
 INCLUDES += $(addprefix -I,$(wildcard $(BOARDDIR)/include))
@@ -703,6 +708,11 @@ BUILDDEPS += pkg-prepare
 BUILDDEPS += $(APPDEPS)
 BUILDDEPS += $(MODULE_LIST_DIR)
 
+# Build dependencies depend on clean (if a make goal), as clean may wipe them.
+# Without them depending on clean parallel builds occasionally fail due to
+# clean removing dependencies that make previously considered as up to date.
+$(BUILDDEPS): $(CLEAN)
+
 # Save value to verify it is not modified later
 _BASELIBS_VALUE_BEFORE_USAGE := $(BASELIBS)
 
@@ -726,7 +736,7 @@ else
 link: ..compiler-check ..build-message $(BASELIBS) $(ARCHIVES) ..module-check
 endif # RIOTNOLINK
 
-$(ELFFILE): $(BASELIBS) $(ARCHIVES)
+$(ELFFILE): $(BASELIBS) $(ARCHIVES) $(LD_SCRIPTS)
 	$(Q)$(_LINK) -o $@
 
 .PHONY: $(APPLICATION_MODULE).module
@@ -899,7 +909,7 @@ include $(RIOTMAKE)/tests/tests.inc.mk
 .PHONY: fuzz
 fuzz:
 	env FLASHFILE="$(FLASHFILE)" PORT="$(PORT)" TERMFLAGS="$(TERMFLAGS)" \
-		"$(RIOTBASE)"/dist/tools/fuzzing/afl.sh $(AFL_FLAGS)
+		"$(RIOTBASE)"/dist/tools/fuzzing/afl.sh $(FLAGS_FOR_AFL)
 
 # Default OBJDUMPFLAGS for platforms which do not specify it:
 OBJDUMPFLAGS ?= -S -D -h

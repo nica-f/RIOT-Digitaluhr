@@ -7,6 +7,21 @@
  */
 
 /**
+ * @defgroup    drivers_slipdev_stdio   STDIO via SLIP
+ * @ingroup     sys_stdio
+ * @brief       Standard input/output backend multiplexed via SLIP
+ *
+ * This will multiplex STDIO via the Serial Line Internet Protocol.
+ * The shell can be accessed via the `sliptty` tool.
+ *
+ * To enable this stdio implementation, select
+ *
+ *     USEMODULE += slipdev_stdio
+ *
+ * @see         drivers_slipdev
+ */
+
+/**
  * @defgroup    drivers_slipdev SLIP network device
  * @ingroup     drivers_netdev
  * @brief       SLIP network device over @ref drivers_periph_uart
@@ -72,6 +87,14 @@ enum {
      * @brief   Device writes received data to stdin
      */
     SLIPDEV_STATE_STDIN,
+    /**
+     * @brief   Device is in standby, will wake up when sending data
+     */
+    SLIPDEV_STATE_STANDBY,
+    /**
+     * @brief   Device is in sleep mode
+     */
+    SLIPDEV_STATE_SLEEP,
 };
 /** @} */
 

@@ -18,7 +18,7 @@
  * Uses POSIX realtime clock and POSIX itimer to mimic hardware.
  *
  * This is based on native's hwtimer implementation by Ludwig Knüpfer.
- * I removed the multiplexing, as xtimer does the same. (kaspar)
+ * I removed the multiplexing, as ztimer does the same. (kaspar)
  *
  * @author      Ludwig Knüpfer <ludwig.knuepfer@fu-berlin.de>
  * @author      Kaspar Schleiser <kaspar@schleiser.de>
@@ -203,21 +203,11 @@ unsigned int timer_read(tim_t dev)
     DEBUG("timer_read()\n");
 
     _native_syscall_enter();
-#ifdef __MACH__
-    clock_serv_t cclock;
-    mach_timespec_t mts;
-    host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
-    clock_get_time(cclock, &mts);
-    mach_port_deallocate(mach_task_self(), cclock);
-    t.tv_sec = mts.tv_sec;
-    t.tv_nsec = mts.tv_nsec;
-#else
 
-    if (real_clock_gettime(CLOCK_MONOTONIC, &t) == -1) {
+    if (clock_gettime(CLOCK_MONOTONIC, &t) == -1) {
         err(EXIT_FAILURE, "timer_read: clock_gettime");
     }
 
-#endif
     _native_syscall_leave();
 
     return ts2ticks(&t) - time_null;

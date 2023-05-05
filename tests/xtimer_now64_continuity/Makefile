@@ -8,19 +8,23 @@ USEMODULE += xtimer_no_ztimer_default
 TEST_ON_CI_BLACKLIST += native
 # Boards that can't run only on xtimer or that always select ztimer
 BOARD_BLACKLIST += \
+                   esp32s2-wemos-mini \
                    feather-nrf52840 \
                    hamilton \
                    mulle \
                    pinetime \
                    ruuvitag \
+                   seeedstudio-gd32 \
+                   sipeed-longan-nano \
                    stm32f429i-disco \
+                   stm32f4discovery \
                    thingy52 \
                    waspmote-pro  \
                    weact-f401cc \
                    weact-f401ce \
                    weact-f411ce \
-                   blackpill-128kib \
-                   bluepill-128kib \
+                   blackpill-stm32f103cb \
+                   bluepill-stm32f103cb \
                    #
 
 # microbit qemu failing currently

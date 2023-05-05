@@ -128,7 +128,7 @@ ifneq (,$(filter esp_idf_heap,$(USEMODULE)))
   USEPKG += tlsf
 endif
 
-ifneq (,$(filter mtd,$(USEMODULE)))
+ifneq (,$(filter mtd periph_flashpage,$(USEMODULE)))
   USEMODULE += esp_idf_spi_flash
 endif
 
@@ -166,10 +166,28 @@ ifneq (,$(filter shell,$(USEMODULE)))
   USEMODULE += ps
 endif
 
+ifneq (,$(filter stdio_usb_serial_jtag, $(USEMODULE)))
+  USEMODULE += tsrb
+  ifneq (,$(filter stdin,$(USEMODULE)))
+    USEMODULE += stdio_usb_serial_jtag_rx
+  endif
+endif
+ifneq (,$(filter stdio_usb_serial_jtag_rx, $(USEMODULE)))
+  USEMODULE += isrpipe
+  USEMODULE += stdio_available
+endif
+
 ifneq (,$(filter tinyusb_portable_espressif,$(USEMODULE)))
   USEMODULE += esp_idf_usb
 endif
 
 ifneq (,$(filter esp_jtag,$(USEMODULE)))
   FEATURES_REQUIRED += esp_jtag
+endif
+
+# enable bootloader reset over USB, requires CDC ACM to be used
+ifneq (,$(filter usbus_cdc_acm tinyusb_class_cdc,$(USEMODULE)))
+  USEMODULE += usb_board_reset
+
+  include $(RIOTMAKE)/tools/usb_board_reset.mk
 endif

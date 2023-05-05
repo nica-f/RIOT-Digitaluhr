@@ -160,6 +160,10 @@ extern void gcoap_init(void);
 AUTO_INIT(gcoap_init,
           AUTO_INIT_PRIO_MOD_GCOAP);
 #endif
+#if IS_USED(MODULE_NANOCOAP_SERVER_AUTO_INIT)
+extern void auto_init_nanocoap_server(void);
+AUTO_INIT(auto_init_nanocoap_server, AUTO_INIT_PRIO_MOD_NANOCOAP);
+#endif
 #if IS_USED(MODULE_DEVFS)
 extern void auto_init_devfs(void);
 AUTO_INIT(auto_init_devfs,
@@ -331,6 +335,11 @@ AUTO_INIT(benchmark_udp_auto_init,
 extern void auto_init_sock_dns(void);
 AUTO_INIT(auto_init_sock_dns,
           AUTO_INIT_PRIO_MOD_DOCK_DNS);
+#endif
+#if IS_USED(MODULE_GNRC_IPV6_STATIC_ADDR)
+extern void auto_init_gnrc_ipv6_static_addr(void);
+AUTO_INIT(auto_init_gnrc_ipv6_static_addr,
+          AUTO_INIT_PRIO_MOD_GNRC_IPV6_STATIC_ADDR);
 #endif
 
 void auto_init(void)

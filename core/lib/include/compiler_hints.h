@@ -21,6 +21,9 @@
 #ifndef COMPILER_HINTS_H
 #define COMPILER_HINTS_H
 
+#include <assert.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -67,13 +70,27 @@ extern "C" {
 #endif
 
 /**
+ * @def       NO_SANITIZE_ARRAY
+ * @brief     Tell the compiler that this array should be ignored during sanitizing.
+ * @details   In special cases, e.g. XFA, the address sanitizer might interfere
+ *            in a way that breaks the application. Use this macro to disable
+ *            address sanitizing for a given variable. Currently only utilised
+ *            by llvm.
+ */
+#if defined(__llvm__) || defined(__clang__)
+#define NO_SANITIZE_ARRAY __attribute__((no_sanitize("address")))
+#else
+#define NO_SANITIZE_ARRAY
+#endif
+
+/**
  * @def       UNREACHABLE()
  * @brief     Tell the compiler that this line of code cannot be reached.
  * @details   Most useful in junction with #NORETURN.
  *            Use this if the compiler cannot tell that e.g.
  *            an assembler instruction causes a longjmp, or a write causes a reboot.
  */
-#if ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 5)) || (__GNUC__ >= 5)
+#if ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 5)) || (__GNUC__ >= 5) || defined(__clang__)
 #define UNREACHABLE() __builtin_unreachable()
 #else
 #define UNREACHABLE() do { /* nothing */ } while (1)
@@ -128,6 +145,40 @@ extern "C" {
 #define IS_CT_CONSTANT(expr) __builtin_constant_p(expr)
 #else
 #define IS_CT_CONSTANT(expr) 0
+#endif
+
+/**
+ * @brief   Hint to the compiler that the condition @p x is likely taken
+ *
+ * @param[in] x     Condition that is likely taken
+ *
+ * @return result of @p x
+ */
+#define likely(x)       __builtin_expect((uintptr_t)(x), 1)
+
+/**
+ * @brief   Hint to the compiler that the condition @p x is likely not taken
+ *
+ * @param[in] x     Condition that is unlikely
+ *
+ * @return result of @p x
+ */
+#define unlikely(x)     __builtin_expect((uintptr_t)(x), 0)
+
+/**
+ * @brief   Behaves like an `assert()`, but tells the compiler that @p cond can
+ *          never be false.
+ *          This allows the compiler to optimize the code accordingly even when
+ *          `NDEBUG` is set / with `DEVELHELP=0`.
+ *
+ *          @p cond being false will result in undefined behavior.
+ *
+ * @param[in] cond  Condition that is guaranteed to be true
+ */
+#ifdef NDEBUG
+#define assume(cond)    ((cond) ? (void)0 : UNREACHABLE())
+#else
+#define assume(cond)    assert(cond)
 #endif
 
 #ifdef __cplusplus

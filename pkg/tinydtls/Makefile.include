@@ -39,12 +39,6 @@ ifeq (,$(CONFIG_KCONFIG_USEPKG_TINYDTLS))
   endif
 endif
 
-ifneq (,$(or $(CONFIG_DTLS_DEBUG),$(filter -DCONFIG_DTLS_DEBUG,$(CFLAGS))))
-  CFLAGS += -DTINYDTLS_LOG_LVL=6
-else
-  CFLAGS += -DTINYDTLS_LOG_LVL=0
-endif
-
 # For now contrib only contains sock_dtls adaption
 ifneq (,$(filter tinydtls_sock_dtls,$(USEMODULE)))
   DIRS += $(RIOTBASE)/pkg/tinydtls/contrib
@@ -69,6 +63,12 @@ endif
 PEER_MAX := $(or $(CONFIG_DTLS_PEER_MAX),$(patsubst -DCONFIG_DTLS_PEER_MAX=%,%,$(filter -DCONFIG_DTLS_PEER_MAX=%,$(CFLAGS))))
 ifneq (,$(PEER_MAX))
     CFLAGS += -DDTLS_PEER_MAX=$(PEER_MAX)
+else ifneq (,$(filter gcoap_dtls,$(USEMODULE)))
+    # The default value in sys/include/net/dtls.h for CONFIG_DTLS_PEER_MAX is 2
+    # when gcoap_dtls is active, otherwise 1. As the default in tinydtls is 1,
+    # we need to set it explicitly if the dtls.h default value deviates from
+    # the tinydtls default.
+    CFLAGS += -DDTLS_PEER_MAX=2
 endif
 
 HANDSHAKE_MAX := $(or $(CONFIG_DTLS_HANDSHAKE_MAX),$(patsubst -DCONFIG_DTLS_HANDSHAKE_MAX=%,%,$(filter -DCONFIG_DTLS_HANDSHAKE_MAX=%,$(CFLAGS))))

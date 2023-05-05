@@ -71,7 +71,7 @@ static int _send(netdev_t *netdev, const iolist_t *iolist)
     /* load packet data into FIFO */
     size_t iol_offset = 0;
     size_t usb_offset = 0;
-    size_t usb_remain = cdcecm->ep_in->ep->len;
+    size_t usb_remain = cdcecm->ep_in->maxpacketsize;
     DEBUG("CDC_ECM_netdev: cur iol: %d\n", iolist->iol_len);
     while (len) {
         mutex_lock(&cdcecm->out_lock);
@@ -132,7 +132,7 @@ static int _recv(netdev_t *netdev, void *buf, size_t max_len, void *info)
     (void)info;
     usbus_cdcecm_device_t *cdcecm = _netdev_to_cdcecm(netdev);
 
-    size_t pktlen = cdcecm->len;
+    size_t pktlen = cdcecm->out_urb.transferred;
 
     if (max_len == 0 && buf == NULL) {
         return pktlen;
@@ -198,7 +198,7 @@ static void _isr(netdev_t *dev)
 {
     usbus_cdcecm_device_t *cdcecm = _netdev_to_cdcecm(dev);
 
-    if (cdcecm->len) {
+    if (cdcecm->out_urb.transferred) {
         cdcecm->netdev.event_callback(&cdcecm->netdev,
                                       NETDEV_EVENT_RX_COMPLETE);
     }

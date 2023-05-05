@@ -28,8 +28,16 @@ $(CARGO_COMPILE_COMMANDS): $(BUILDDEPS)
 	$(Q)DIRS="$(DIRS)" APPLICATION_BLOBS="$(BLOBS)" \
 	  "$(MAKE)" -C $(APPDIR) -f $(RIOTMAKE)/application.inc.mk compile-commands
 	@# replacement addresses https://github.com/rust-lang/rust-bindgen/issues/1555
+	@# Keep triples in sync with makefiles/arch/riscv.inc.mk
 	$(Q)$(RIOTTOOLS)/compile_commands/compile_commands.py $(CARGO_COMPILE_COMMANDS_FLAGS) $(BINDIR) \
-	  | sed 's/"riscv-none-embed"/"riscv32"/g' \
+	  | sed -e 's/"riscv32-none-elf"/"riscv32"/g' \
+	        -e 's/"riscv-none-elf"/"riscv32"/g' \
+	        -e 's/"riscv32-unknown-elf"/"riscv32"/g' \
+	        -e 's/"riscv32-elf"/"riscv32"/g' \
+	        -e 's/"riscv64-none-elf"/"riscv32"/g' \
+	        -e 's/"riscv64-unknown-elf"/"riscv32"/g' \
+	        -e 's/"riscv64-elf"/"riscv32"/g' \
+	        -e 's/"riscv-none-embed"/"riscv32"/g' \
 	  | $(LAZYSPONGE) $@
 
 
@@ -51,7 +59,8 @@ $(CARGO_LIB): $(RIOTBUILD_CONFIG_HEADER_C) $(BUILDDEPS) $(CARGO_COMPILE_COMMANDS
 		($(COLOR_ECHO) \
 		'$(COLOR_RED)Error: No Rust libraries are installed for the board'"'"'s CPU.$(COLOR_RESET) Run\n    $(COLOR_GREEN)$$$(COLOR_RESET) rustup target add $(RUST_TARGET) $(patsubst %,--toolchain %,$(CARGO_CHANNEL))\nor set `CARGO_OPTIONS=-Zbuild-std=core`.'; \
 		exit 1)
-	$(Q)CC= CFLAGS= CPPFLAGS= CXXFLAGS= \
+	$(Q)# finally call out to cargo. mind the "+" to pass down make's jobserver.
+	$(Q)+ CC= CFLAGS= CPPFLAGS= CXXFLAGS= \
 		RIOT_COMPILE_COMMANDS_JSON="$(CARGO_COMPILE_COMMANDS)" \
 		RIOT_USEMODULE="$(USEMODULE)" \
 		cargo $(patsubst +,,+${CARGO_CHANNEL}) \

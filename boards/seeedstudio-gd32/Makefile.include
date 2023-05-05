@@ -1,2 +1,2 @@
-PROGRAMMER ?= openocd
-OPENOCD_RESET_USE_CONNECT_ASSERT_SRST=1
+PORT_LINUX ?= /dev/ttyACM0
+include $(RIOTBOARD)/common/gd32v/Makefile.include

@@ -27,7 +27,7 @@
  * header. To avoid having to patch all these files, `stdlib.h` is included
  * in this header file, which in turn is included by every ESP-IDF file.
  */
-#ifndef __ASSEMBLER__
+#if !defined(__ASSEMBLER__) && !defined(LD_FILE_GEN)
 #include <stdlib.h>
 #endif
 
@@ -55,15 +55,15 @@
 /**
  * Default console configuration
  *
- * STDIO_UART_BAUDRATE is used as CONFIG_CONSOLE_UART_BAUDRATE and
+ * STDIO_UART_BAUDRATE is used as CONFIG_ESP_CONSOLE_UART_BAUDRATE and
  * can be overridden by an application specific configuration.
  */
-#define CONFIG_CONSOLE_UART_NUM 0
-#define CONFIG_ESP_CONSOLE_UART_NUM     CONFIG_CONSOLE_UART_NUM
-
-#ifndef CONFIG_CONSOLE_UART_BAUDRATE
-#define CONFIG_CONSOLE_UART_BAUDRATE    STDIO_UART_BAUDRATE
+#ifdef CONFIG_CONSOLE_UART_NUM
+#define CONFIG_ESP_CONSOLE_UART_NUM         CONFIG_CONSOLE_UART_NUM
+#else
+#define CONFIG_ESP_CONSOLE_UART_NUM         0
 #endif
+#define CONFIG_ESP_CONSOLE_UART_BAUDRATE    STDIO_UART_BAUDRATE
 
 /**
  * Log output configuration (DO NOT CHANGE)
@@ -205,6 +205,33 @@
 
 #define CONFIG_ESP32_PHY_CALIBRATION_AND_DATA_STORAGE   CONFIG_ESP_PHY_CALIBRATION_AND_DATA_STORAGE
 #define CONFIG_ESP32_PHY_MAX_WIFI_TX_POWER              CONFIG_ESP_PHY_MAX_WIFI_TX_POWER
+
+/**
+ * Flashpage configuration
+ */
+#ifndef CONFIG_ESP_FLASHPAGE_CAPACITY
+
+#ifdef MODULE_PERIPH_FLASHPAGE
+#if CONFIG_ESP_FLASHPAGE_CAPACITY_64K
+#define CONFIG_ESP_FLASHPAGE_CAPACITY                   0x10000
+#elif CONFIG_ESP_FLASHPAGE_CAPACITY_128K
+#define CONFIG_ESP_FLASHPAGE_CAPACITY                   0x20000
+#elif CONFIG_ESP_FLASHPAGE_CAPACITY_256K
+#define CONFIG_ESP_FLASHPAGE_CAPACITY                   0x40000
+#elif CONFIG_ESP_FLASHPAGE_CAPACITY_512K
+#define CONFIG_ESP_FLASHPAGE_CAPACITY                   0x80000
+#elif CONFIG_ESP_FLASHPAGE_CAPACITY_1M
+#define CONFIG_ESP_FLASHPAGE_CAPACITY                   0x100000
+#elif CONFIG_ESP_FLASHPAGE_CAPACITY_2M
+#define CONFIG_ESP_FLASHPAGE_CAPACITY                   0x200000
+#else
+#define CONFIG_ESP_FLASHPAGE_CAPACITY                   0x80000
+#endif
+#else /* MODULE_PERIPH_FLASHPAGE_IN_ADDRESS_SPACE */
+#define CONFIG_ESP_FLASHPAGE_CAPACITY                   0x0
+#endif /* MODULE_PERIPH_FLASHPAGE_IN_ADDRESS_SPACE */
+
+#endif /* !CONFIG_ESP_FLASHPAGE_CAPACITY */
 
 #endif /* DOXYGEN */
 

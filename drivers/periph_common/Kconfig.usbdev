@@ -22,6 +22,16 @@ config MODULE_PERIPH_INIT_USBDEV
     bool "Auto initialize USBDEV peripheral"
     default y if MODULE_PERIPH_INIT
 
+config MODULE_PERIPH_USBDEV_HS
+    bool "Use USB HS peripheral"
+    depends on HAS_PERIPH_USBDEV_HS
+    default y if MODULE_PERIPH_INIT_USBDEV_HS_ULPI || MODULE_PERIPH_USBDEV_HS_UTMI
+
+config MODULE_PERIPH_INIT_USBDEV_HS
+    bool
+    depends on MODULE_PERIPH_USBDEV_HS
+    default y if MODULE_PERIPH_INIT
+
 config MODULE_PERIPH_USBDEV_HS_ULPI
     bool "Use USB HS peripheral with ULPI HS PHY"
     depends on HAS_PERIPH_USBDEV_HS_ULPI
@@ -44,7 +54,6 @@ endif
 
 config MODULE_PERIPH_USBDEV_CLK
     bool
-    depends on HAS_PERIPH_USBDEV
     help
         Enable the USB device specific clock settings, if there are any
 

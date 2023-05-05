@@ -23,6 +23,7 @@
 #include <math.h>
 
 #include "embUnit.h"
+#include "flash_utils.h"
 #include "senml/phydat.h"
 
 #define ENABLE_DEBUG (0)
@@ -84,7 +85,7 @@ static value_test_t value_tests[] = {
         .senml2 = senml_df(0, 3, SENML_UNIT_NONE),
     },
     {
-        .phydat = { { 314, 0, 0 }, UNIT_G, -2 },
+        .phydat = { { 314, 0, 0 }, UNIT_G_FORCE, -2 },
         .senml1 = senml_f(30.792881, SENML_UNIT_METER_PER_SQUARE_SECOND),
         .senml2 = senml_df(314, -2, SENML_UNIT_NONE),
     },
@@ -99,7 +100,7 @@ static value_test_t value_tests[] = {
         .senml2 = senml_df(193, 2, SENML_UNIT_KILOGRAM_PER_CUBIC_METER),
     },
     {
-        .phydat = { { 220, 0, 0 }, UNIT_GS, 3 },
+        .phydat = { { 220, 0, 0 }, UNIT_GAUSS, 3 },
         .senml1 = senml_f(22, SENML_UNIT_TESLA),
         .senml2 = senml_df(220, -1, SENML_UNIT_TESLA),
     }
@@ -114,7 +115,7 @@ void test_phydat_to_senml_float(void)
 
         phydat_to_senml_float(&res, &(value_tests[i].phydat), value_tests[i].dim);
 
-        DEBUG("Float: %" PRIi16 "e%" PRIi16 " %s -> %.f %s\n",
+        DEBUG("Float: %" PRIi16 "e%" PRIi16 " %" PRIsflash " -> %.f %s\n",
               value_tests[i].phydat.val[value_tests[i].dim], value_tests[i].phydat.scale,
               phydat_unit_to_str(value_tests[i].phydat.unit),
               res.value.value.f,
@@ -137,7 +138,7 @@ void test_phydat_to_senml_decimal(void)
 
         phydat_to_senml_decimal(&res, &(value_tests[i].phydat), value_tests[i].dim);
 
-        DEBUG("Decimal: %" PRIi16 "e%" PRIi16 " %s -> %" PRIi32 "e%" PRIi32 " %s\n",
+        DEBUG("Decimal: %" PRIi16 "e%" PRIi16 " %s -> %" PRIi32 "e%" PRIi32 " %" PRIsflash"\n",
               value_tests[i].phydat.val[value_tests[i].dim], value_tests[i].phydat.scale,
               phydat_unit_to_str(value_tests[i].phydat.unit),
               res.value.value.df.m, res.value.value.df.e,

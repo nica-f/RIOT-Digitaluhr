@@ -23,31 +23,57 @@
  * THE SOFTWARE.
  */
 
+#define USB_H_USER_IS_RIOT_INTERNAL
+
 #include "fmt.h"
 #include "luid.h"
 #include "tusb.h"
 #include "usb.h"
 
+#include "net/ethernet.h"
+
+#ifdef MODULE_TINYUSB_DFU
+#include "riotboot/usb_dfu.h"
+#endif
+
 #include "tinyusb_descriptors.h"
+
+#define ENABLE_DEBUG    0
+#include "debug.h"
 
 /* don't compile this part if CONFIG_TUSBD_USE_CUSTOM_DESC is set */
 #if !defined(CONFIG_TUSBD_USE_CUSTOM_DESC)
 
 #if (MODULE_TINYUSB_CLASS_AUDIO || \
      MODULE_TINYUSB_CLASS_BTH || \
-     MODULE_TINYUSB_CLASS_DFU || \
-     MODULE_TINYUSB_CLASS_DFU_RUNTIME || \
      MODULE_TINYUSB_CLASS_MIDI || \
-     MODULE_TINYUSB_CLASS_NET_ECM_RNDIS || \
-     MODULE_TINYUSB_CLASS_NET_NCM || \
      MODULE_TINYUSB_CLASS_USBTMC || \
      MODULE_TINYUSB_CLASS_VIDEO || \
      (CONFIG_TUSBD_CDC_NUMOF > 2) || \
+     (CONFIG_TUSBD_DFU_NUMOF > 1) || \
+     (CONFIG_TUSBD_DFU_RT_NUMOF > 1) || \
+     (CONFIG_TUSBD_NET_NUMOF > 1) || \
      (CONFIG_TUSBD_HID_NUMOF > 2) || \
-     (CONFIG_TUSBD_MSC_NUMOF > 1))
+     (CONFIG_TUSBD_MSC_NUMOF > 1) || \
+     (CONFIG_TUSBD_VENDOR_NUMOF > 1))
 #error Using generic descriptors is not possible for the selected combination \
        of device class interfaces. Custom descriptors have to be implemented.
 #endif
+
+/* If CDC ECM and RNDIS are used simultaneously, an alternative configuration
+ * descriptor is required. */
+#if CONFIG_TUSBD_NET_CDC_ECM && CONFIG_TUSBD_NET_RNDIS
+#define _TUD_CONFIG_DESC_NUMOF  2
+#else
+#define _TUD_CONFIG_DESC_NUMOF  1
+#endif
+
+enum {
+    _TUD_CONFIG_DESC_ID = 0,
+#if _TUD_CONFIG_DESC_NUMOF == 2
+    _TUD_CONFIG_DESC_ALT_ID = 1,
+#endif
+};
 
 /*
  * --------------------------------------------------------------------+
@@ -81,7 +107,7 @@ tusb_desc_device_t const tusb_desc_device = {
     .iProduct           = TUSBD_STR_IDX_PRODUCT,
     .iSerialNumber      = TUSBD_STR_IDX_SERIAL,
 
-    .bNumConfigurations = 0x01
+    .bNumConfigurations = _TUD_CONFIG_DESC_NUMOF
 };
 
 /*
@@ -184,26 +210,6 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id,
  *--------------------------------------------------------------------+
  */
 
-#ifndef CONFIG_TUSBD_FS_EP_SIZE
-#define CONFIG_TUSBD_FS_EP_SIZE             64
-#endif
-
-#ifndef CONFIG_TUSBD_HS_EP_SIZE
-#define CONFIG_TUSBD_HS_EP_SIZE             512
-#endif
-
-#ifndef CONFIG_TUSBD_CDC_NOTIF_EP_SIZE
-#define CONFIG_TUSBD_CDC_NOTIF_EP_SIZE      8
-#endif
-
-#ifndef CONFIG_TUSBD_HID_0_POLL_INTERVALL
-#define CONFIG_TUSBD_HID_0_POLL_INTERVALL   10
-#endif
-
-#ifndef CONFIG_TUSBD_HID_1_POLL_INTERVALL
-#define CONFIG_TUSBD_HID_1_POLL_INTERVALL   10
-#endif
-
 #if CONFIG_USB_SELF_POWERED && CONFIG_USB_REM_WAKEUP
 #define DESC_DEV_ATTR   (USB_CONF_ATTR_SELF_POWERED || USB_CONF_ATTR_REM_WAKEUP)
 #elif CONFIG_USB_SELF_POWERED
@@ -214,62 +220,171 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id,
 #define DESC_DEV_ATTR   (0)
 #endif
 
+#define _tusb_speed_fs   0
+#define _tusb_speed_hs   1
+
+#define _TUD_CONFIG_DESC(id, len) \
+    /* Config number, interface count, string index, total length, attribute,
+     * power in mA */ \
+    TUD_CONFIG_DESCRIPTOR(id + 1, TUSBD_ITF_NUMOF, 0, len, \
+                          DESC_DEV_ATTR, CONFIG_USB_MAX_POWER)
+
+#define _TUD_CDC_DESC(speed, n) \
+    /* Interface number, string index, EP notification address and size,
+     * EP Data Out & In, EP size. */ \
+    TUD_CDC_DESCRIPTOR(TUSBD_ITF_CDC_##n, TUSBD_STR_IDX_CDC_##n, \
+                       TUSBD_EP_CDC_##n##_NOTIF, CONFIG_TUSBD_CDC_NOTIF_EP_SIZE, \
+                       TUSBD_EP_CDC_##n##_OUT, TUSBD_EP_CDC_##n##_IN, \
+                       speed ? CONFIG_TUSBD_CDC_HS_EP_SIZE \
+                             : CONFIG_TUSBD_CDC_FS_EP_SIZE)
+
+#define _TUD_DFU_DESC(speed) \
+    /* Interface number, alternate count, starting string index, attributes,
+     * detach timeout, transfer size */ \
+    TUD_DFU_DESCRIPTOR(TUSBD_ITF_DFU, CONFIG_TUSBD_DFU_ALT_NUMOF, \
+                       TUSBD_STR_IDX_DFU_SLOT_0, CONFIG_TUSBD_DFU_ATTR, \
+                       CONFIG_TUSBD_DFU_DETACH_TIMEOUT, \
+                       speed ? CONFIG_TUSBD_DFU_HS_XFER_SIZE \
+                             : CONFIG_TUSBD_DFU_FS_XFER_SIZE)
+
+#define _TUD_DFU_RT_DESC(speed) \
+    /* Interface number, alternate count, starting string index, attributes,
+     * detach timeout, transfer size */ \
+    TUD_DFU_RT_DESCRIPTOR(TUSBD_ITF_DFU_RT, \
+                          TUSBD_STR_IDX_DFU_RT, DFU_ATTR_WILL_DETACH, \
+                          CONFIG_TUSBD_DFU_RT_DETACH_TIMEOUT, \
+                          speed ? CONFIG_TUSBD_DFU_RT_HS_XFER_SIZE \
+                                : CONFIG_TUSBD_DFU_RT_FS_XFER_SIZE)
+
+#define _TUD_HID_INOUT_DESC(speed, n) \
+    /* Interface number, string index, protocol, report descriptor len,
+     * EP Out & EP In address, EP size, polling interval */ \
+    TUD_HID_INOUT_DESCRIPTOR(TUSBD_ITF_HID_##n, TUSBD_STR_IDX_HID_##n, \
+                             HID_ITF_PROTOCOL_NONE, \
+                             sizeof(tusb_desc_hid_##n##_report), \
+                             TUSBD_EP_HID_##n##_OUT, TUSBD_EP_HID_##n##_IN, \
+                             CONFIG_TUSBD_HID_EP_SIZE, \
+                             CONFIG_TUSBD_HID_##n##_POLL_INTERVALL)
+
+#define _TUD_MSC_DESC(speed) \
+    /* Interface number, string index, EP Out & In address, EP size */ \
+    TUD_MSC_DESCRIPTOR(TUSBD_ITF_MSC, TUSBD_STR_IDX_MSC, \
+                       TUSBD_EP_MSC_OUT, TUSBD_EP_MSC_IN, \
+                       speed ? CONFIG_TUSBD_MSC_HS_EP_SIZE \
+                             : CONFIG_TUSBD_MSC_FS_EP_SIZE)
+
+#define _TUD_CDC_ECM_DESC(speed) \
+    /* Interface number, Description string index, MAC address string index,
+     * EP notification address and size, EP Data Out & In, EP size, MTU size. */ \
+    TUD_CDC_ECM_DESCRIPTOR(TUSBD_ITF_NET, \
+                           TUSBD_STR_IDX_NET_CDC_ECM, TUSBD_STR_IDX_NET_MAC, \
+                           TUSBD_EP_NET_NOTIF, \
+                           CONFIG_TUSBD_NET_NOTIF_EP_SIZE, \
+                           TUSBD_EP_NET_OUT, TUSBD_EP_NET_IN, \
+                           speed ? CONFIG_TUSBD_NET_HS_EP_SIZE \
+                                 : CONFIG_TUSBD_NET_FS_EP_SIZE, \
+                           CONFIG_TUSBD_NET_MTU_SIZE)
+
+#define _TUD_CDC_NCM_DESC(speed) \
+    /* Interface number, Description string index, MAC address string index,
+     * EP notification address and size, EP Data Out & In, EP size, MTU size. */ \
+    TUD_CDC_NCM_DESCRIPTOR(TUSBD_ITF_NET, \
+                           TUSBD_STR_IDX_NET_CDC_NCM, TUSBD_STR_IDX_NET_MAC, \
+                           TUSBD_EP_NET_NOTIF, \
+                           CONFIG_TUSBD_NET_NOTIF_EP_SIZE, \
+                           TUSBD_EP_NET_OUT, TUSBD_EP_NET_IN, \
+                           speed ? CONFIG_TUSBD_NET_HS_EP_SIZE \
+                                 : CONFIG_TUSBD_NET_FS_EP_SIZE, \
+                           CONFIG_TUSBD_NET_MTU_SIZE)
+
+#define _TUD_RNDIS_DESC(speed) \
+    /* Interface number, Description string index, EP notification address and
+     * size, EP Data Out & In, EP size */ \
+    TUD_RNDIS_DESCRIPTOR(TUSBD_ITF_NET, TUSBD_STR_IDX_NET_RNDIS, \
+                         TUSBD_EP_NET_NOTIF, 8, TUSBD_EP_NET_OUT, \
+                         TUSBD_EP_NET_IN, \
+                         speed ? CONFIG_TUSBD_NET_HS_EP_SIZE \
+                               : CONFIG_TUSBD_NET_FS_EP_SIZE)
+
+#define _TUD_VENDOR_DESC(speed) \
+    /* Interface number, string index, EP Out & In address, EP size */ \
+    TUD_VENDOR_DESCRIPTOR(TUSBD_ITF_VENDOR, TUSBD_STR_IDX_VENDOR, \
+                          TUSBD_EP_VENDOR_OUT, TUSBD_EP_VENDOR_IN, \
+                          speed ? CONFIG_TUSBD_VENDOR_HS_EP_SIZE \
+                                : CONFIG_TUSBD_VENDOR_FS_EP_SIZE)
+
 /* FS configuration */
 __attribute__((weak))
 uint8_t const tusb_desc_fs_config[] = {
-    /* Config number, interface count, string index, total length, attribute,
-     * power in mA */
-    TUD_CONFIG_DESCRIPTOR(1, TUSBD_ITF_NUMOF, 0, TUSBD_DESC_TOTAL_LEN,
-                          DESC_DEV_ATTR, CONFIG_USB_MAX_POWER),
+    _TUD_CONFIG_DESC(_TUD_CONFIG_DESC_ID, TUSBD_DESC_TOTAL_LEN),
 #if CONFIG_TUSBD_CDC_NUMOF > 0
-    /* Interface number, string index, EP notification address and size,
-     * EP Data Out & In, EP size. */
-    TUD_CDC_DESCRIPTOR(TUSBD_ITF_CDC_0, TUSBD_STR_IDX_CDC_0,
-                       TUSBD_EP_CDC_0_NOTIF, CONFIG_TUSBD_CDC_NOTIF_EP_SIZE,
-                       TUSBD_EP_CDC_0_OUT, TUSBD_EP_CDC_0_IN,
-                       CONFIG_TUSBD_FS_EP_SIZE),
+    _TUD_CDC_DESC(_tusb_speed_fs, 0),
 #endif
 #if CONFIG_TUSBD_CDC_NUMOF > 1
-    /* Interface number, string index, EP notification address and size,
-     * EP Data Out & In, EP size. */
-    TUD_CDC_DESCRIPTOR(TUSBD_ITF_CDC_1, TUSBD_STR_IDX_CDC_1,
-                       TUSBD_EP_CDC_1_NOTIF, CONFIG_TUSBD_CDC_NOTIF_EP_SIZE,
-                       TUSBD_EP_CDC_1_OUT, TUSBD_EP_CDC_1_IN,
-                       CONFIG_TUSBD_FS_EP_SIZE),
+    _TUD_CDC_DESC(_tusb_speed_fs, 1),
+#endif
+#if CONFIG_TUSBD_DFU_NUMOF
+    _TUD_DFU_DESC(_tusb_speed_fs),
+#endif
+#if CONFIG_TUSBD_DFU_RT_NUMOF
+    _TUD_DFU_RT_DESC(_tusb_speed_fs),
 #endif
 #if CONFIG_TUSBD_HID_NUMOF > 0
-    /* Interface number, string index, protocol, report descriptor len,
-     * EP Out & EP In address, EP size, polling interval */
-    TUD_HID_INOUT_DESCRIPTOR(TUSBD_ITF_HID_0, TUSBD_STR_IDX_HID_0,
-                             HID_TUSBD_ITF_PROTOCOL_NONE,
-                             sizeof(tusb_desc_hid_0_report),
-                             TUSBD_EP_HID_0_OUT, TUSBD_EP_HID_0_IN,
-                             CONFIG_TUSBD_HID_EP_SIZE,
-                             CONFIG_TUSBD_HID_0_POLL_INTERVALL),
+    _TUD_HID_INOUT_DESC(_tusb_speed_fs, 0),
 #endif
 #if CONFIG_TUSBD_HID_NUMOF > 1
-    /* Interface number, string index, protocol, report descriptor len,
-     * EP Out & EP In address, EP size, polling interval */
-    TUD_HID_INOUT_DESCRIPTOR(TUSBD_ITF_HID_1, TUSBD_STR_IDX_HID_1,
-                             HID_TUSBD_ITF_PROTOCOL_NONE,
-                             sizeof(tusb_desc_hid_1_report),
-                             TUSBD_EP_HID_1_OUT, TUSBD_EP_HID_1_IN,
-                             CONFIG_TUSBD_HID_EP_SIZE,
-                             CONFIG_TUSBD_HID_1_POLL_INTERVALL),
+    _TUD_HID_INOUT_DESC(_tusb_speed_fs, 1),
 #endif
 #if CONFIG_TUSBD_MSC_NUMOF
-    /* Interface number, string index, EP Out & In address, EP size */
-    TUD_MSC_DESCRIPTOR(TUSBD_ITF_MSC, TUSBD_STR_IDX_MSC,
-                       TUSBD_EP_MSC_OUT, TUSBD_EP_MSC_IN,
-                       CONFIG_TUSBD_FS_EP_SIZE),
+    _TUD_MSC_DESC(_tusb_speed_fs),
+#endif
+#if CONFIG_TUSBD_NET_CDC_ECM
+    _TUD_CDC_ECM_DESC(_tusb_speed_fs),
+#elif CONFIG_TUSBD_NET_CDC_NCM
+    _TUD_CDC_NCM_DESC(_tusb_speed_fs),
+#elif CONFIG_TUSBD_NET_RNDIS
+    _TUD_RNDIS_DESC(_tusb_speed_fs),
 #endif
 #if CONFIG_TUSBD_VENDOR_NUMOF
-    /* Interface number, string index, EP Out & In address, EP size */
-    TUD_VENDOR_DESCRIPTOR(TUSBD_ITF_VENDOR, TUSBD_STR_IDX_VENDOR,
-                          TUSBD_EP_VENDOR_OUT, TUSBD_EP_VENDOR_IN,
-                          CONFIG_TUSBD_FS_EP_SIZE),
+    _TUD_VENDOR_DESC(_tusb_speed_fs),
 #endif
 };
+
+#if _TUD_CONFIG_DESC_NUMOF == 2
+__attribute__((weak))
+uint8_t const tusb_desc_fs_config_alt[] = {
+    _TUD_CONFIG_DESC(_TUD_CONFIG_DESC_ALT_ID, TUSBD_DESC_ALT_TOTAL_LEN),
+#if CONFIG_TUSBD_CDC_NUMOF > 0
+    _TUD_CDC_DESC(_tusb_speed_fs, 0),
+#endif
+#if CONFIG_TUSBD_CDC_NUMOF > 1
+    _TUD_CDC_DESC(_tusb_speed_fs, 1),
+#endif
+#if CONFIG_TUSBD_DFU_NUMOF
+    _TUD_DFU_DESC(_tusb_speed_fs),
+#endif
+#if CONFIG_TUSBD_DFU_RT_NUMOF
+    _TUD_DFU_RT_DESC(_tusb_speed_fs),
+#endif
+#if CONFIG_TUSBD_HID_NUMOF > 0
+    _TUD_HID_INOUT_DESC(_tusb_speed_fs, 0),
+#endif
+#if CONFIG_TUSBD_HID_NUMOF > 1
+    _TUD_HID_INOUT_DESC(_tusb_speed_fs, 1),
+#endif
+#if CONFIG_TUSBD_MSC_NUMOF
+    _TUD_MSC_DESC(_tusb_speed_fs),
+#endif
+    /* The alternative configuration descriptor is only required if CDC ECM and
+     * RDNIS are used simultaneously. In this case, the main configuration
+     * descriptor contains the CDC ECM interface descriptor and the alternative
+     * configuration descriptor contains the RNDIS interface descriptor. */
+    _TUD_RNDIS_DESC(_tusb_speed_fs),
+#if CONFIG_TUSBD_VENDOR_NUMOF
+    _TUD_VENDOR_DESC(_tusb_speed_fs),
+#endif
+};
+#endif /* _TUD_CONFIG_DESC_NUMOF == 2 */
 
 #if TUD_OPT_HIGH_SPEED
 /* Per USB specs: high speed capable device must report device_qualifier
@@ -278,59 +393,75 @@ uint8_t const tusb_desc_fs_config[] = {
 /* HS configuration */
 __attribute__((weak))
 uint8_t const tusb_desc_hs_config[] = {
-    /* Config number, interface count, string index, total length, attribute,
-     * power in mA */
-    TUD_CONFIG_DESCRIPTOR(1, TUSBD_ITF_NUMOF, 0, TUSBD_DESC_TOTAL_LEN,
-                          DESC_DEV_ATTR, CONFIG_USB_MAX_POWER),
+    _TUD_CONFIG_DESC(_TUD_CONFIG_DESC_ID, TUSBD_DESC_TOTAL_LEN),
 #if CONFIG_TUSBD_CDC_NUMOF > 0
-    /* Interface number, string index, EP notification address and size,
-     * EP Data Out & In, EP size. */
-    TUD_CDC_DESCRIPTOR(TUSBD_ITF_CDC_0, TUSBD_STR_IDX_CDC_0,
-                       TUSBD_EP_CDC_0_NOTIF, CONFIG_TUSBD_CDC_NOTIF_EP_SIZE,
-                       TUSBD_EP_CDC_0_OUT, TUSBD_EP_CDC_0_IN,
-                       CONFIG_TUSBD_HS_EP_SIZE),
+    _TUD_CDC_DESC(_tusb_speed_hs, 0),
 #endif
 #if CONFIG_TUSBD_CDC_NUMOF > 1
-    /* Interface number, string index, EP notification address and size,
-     * EP Data Out & In, EP size. */
-    TUD_CDC_DESCRIPTOR(TUSBD_ITF_CDC_1, TUSBD_STR_IDX_CDC_1,
-                       TUSBD_EP_CDC_1_NOTIF, CONFIG_TUSBD_CDC_NOTIF_EP_SIZE,
-                       TUSBD_EP_CDC_1_OUT, TUSBD_EP_CDC_1_IN,
-                       CONFIG_TUSBD_HS_EP_SIZE),
+    _TUD_CDC_DESC(_tusb_speed_hs, 1),
+#endif
+#if CONFIG_TUSBD_DFU
+    _TUD_DFU_DESC(_tusb_speed_hs),
+#endif
+#if CONFIG_TUSBD_DFU_RT_NUMOF
+    _TUD_DFU_RT_DESC(_tusb_speed_hs),
 #endif
 #if CONFIG_TUSBD_HID_NUMOF > 0
-    /* Interface number, string index, protocol, report descriptor len,
-     * EP Out & EP In address, EP size, polling interval */
-    TUD_HID_INOUT_DESCRIPTOR(TUSBD_ITF_HID_0, TUSBD_STR_IDX_HID_0,
-                             HID_TUSBD_ITF_PROTOCOL_NONE,
-                             sizeof(tusb_desc_hid_0_report),
-                             TUSBD_EP_HID_0_OUT, TUSBD_EP_HID_0_IN,
-                             CONFIG_TUSBD_HID_EP_SIZE,
-                             CONFIG_TUSBD_HID_0_POLL_INTERVALL),
+    _TUD_HID_INOUT_DESC(_tusb_speed_hs, 0),
 #endif
 #if CONFIG_TUSBD_HID_NUMOF > 1
-    /* Interface number, string index, protocol, report descriptor len,
-     * EP Out & EP In address, EP size, polling interval */
-    TUD_HID_INOUT_DESCRIPTOR(TUSBD_ITF_HID_1, TUSBD_STR_IDX_HID_1,
-                             HID_TUSBD_ITF_PROTOCOL_NONE,
-                             sizeof(tusb_desc_hid_1_report),
-                             TUSBD_EP_HID_1_OUT, TUSBD_EP_HID_1_IN,
-                             CONFIG_TUSBD_HID_EP_SIZE,
-                             CONFIG_TUSBD_HID_1_POLL_INTERVALL),
+    _TUD_HID_INOUT_DESC(_tusb_speed_hs, 1),
 #endif
 #if CONFIG_TUSBD_MSC_NUMOF
-    /* Interface number, string index, EP Out & In address, EP size */
-    TUD_MSC_DESCRIPTOR(TUSBD_ITF_MSC, TUSBD_STR_IDX_MSC,
-                       TUSBD_EP_MSC_OUT, TUSBD_EP_MSC_IN,
-                       CONFIG_TUSBD_HS_EP_SIZE),
+    _TUD_MSC_DESC(_tusb_speed_hs),
+#endif
+#if CONFIG_TUSBD_NET_CDC_ECM
+    _TUD_CDC_ECM_DESC(_tusb_speed_hs),
+#elif CONFIG_TUSBD_NET_CDC_NCM
+    _TUD_CDC_NCM_DESC(_tusb_speed_hs),
+#elif CONFIG_TUSBD_NET_RNDIS
+    _TUD_RNDIS_DESC(_tusb_speed_hs),
 #endif
 #if CONFIG_TUSBD_VENDOR_NUMOF
-    /* Interface number, string index, EP Out & In address, EP size */
-    TUD_VENDOR_DESCRIPTOR(TUSBD_ITF_VENDOR, TUSBD_STR_IDX_VENDOR,
-                          TUSBD_EP_VENDOR_OUT, TUSBD_EP_VENDOR_IN,
-                          CONFIG_TUSBD_HS_EP_SIZE),
+    _TUD_VENDOR_DESC(_tusb_speed_hs),
 #endif
 };
+
+#if _TUD_CONFIG_DESC_NUMOF == 2
+__attribute__((weak))
+uint8_t const tusb_desc_hs_config_alt[] = {
+    _TUD_CONFIG_DESC(_TUD_CONFIG_DESC_ALT_ID, TUSBD_DESC_ALT_TOTAL_LEN),
+#if CONFIG_TUSBD_CDC_NUMOF > 0
+    _TUD_CDC_DESC(_tusb_speed_hs, 0),
+#endif
+#if CONFIG_TUSBD_CDC_NUMOF > 1
+    _TUD_CDC_DESC(_tusb_speed_hs, 1),
+#endif
+#if CONFIG_TUSBD_DFU
+    _TUD_DFU_DESC(_tusb_speed_hs),
+#endif
+#if CONFIG_TUSBD_DFU_RT_NUMOF
+    _TUD_DFU_RT_DESC(_tusb_speed_hs),
+#endif
+#if CONFIG_TUSBD_HID_NUMOF > 0
+    _TUD_HID_INOUT_DESC(_tusb_speed_hs, 0),
+#endif
+#if CONFIG_TUSBD_HID_NUMOF > 1
+    _TUD_HID_INOUT_DESC(_tusb_speed_hs, 1),
+#endif
+#if CONFIG_TUSBD_MSC_NUMOF
+    _TUD_MSC_DESC(_tusb_speed_hs),
+#endif
+    /* The alternative configuration descriptor is only required if CDC ECM and
+     * RDNIS are used simultaneously. In this case, the main configuration
+     * descriptor contains the CDC ECM interface descriptor and the alternative
+     * configuration descriptor contains the RNDIS interface descriptor. */
+    _TUD_RNDIS_DESC(_tusb_speed_hs),
+#if CONFIG_TUSBD_VENDOR_NUMOF
+    _TUD_VENDOR_DESC(_tusb_speed_hs),
+#endif
+};
+#endif /* _TUD_CONFIG_DESC_NUMOF == 2 */
 
 /* other speed configuration */
 uint8_t tusb_desc_other_speed_config[TUSBD_DESC_TOTAL_LEN];
@@ -357,7 +488,7 @@ tusb_desc_device_qualifier_t const tusb_desc_device_qualifier = {
 #endif
 
     .bMaxPacketSize0    = CONFIG_TUSBD_EP0_SIZE,
-    .bNumConfigurations = 0x01,
+    .bNumConfigurations = _TUD_CONFIG_DESC_NUMOF,
     .bReserved          = 0x00
 };
 
@@ -383,18 +514,37 @@ uint8_t const *tud_descriptor_device_qualifier_cb(void)
 __attribute__((weak))
 uint8_t const *tud_descriptor_other_speed_configuration_cb(uint8_t index)
 {
-    (void)index;  /* for multiple configurations */
+    DEBUG("[tinyusb] %s: %u\n", __func__, index);
 
-    /* If the link speed is HS, return the FS config, and vice versa.
-     * Note: the descriptor type is OHER_SPEED_CONFIG instead of CONFIG */
-    memcpy(tusb_desc_other_speed_config,
-           (tud_speed_get() == TUSB_SPEED_HIGH) ? tusb_desc_fs_config
-                                                : tusb_desc_hs_config,
-           TUSBD_DESC_TOTAL_LEN);
+    assert(index < _TUD_CONFIG_DESC_NUMOF);
 
-    tusb_desc_other_speed_config[1] = TUSB_DESC_OTHER_SPEED_CONFIG;
+    if (index == _TUD_CONFIG_DESC_ID) {
+        /* If the link speed is HS, return the FS config, and vice versa.
+         * Note: the descriptor type is OHER_SPEED_CONFIG instead of CONFIG */
+        memcpy(tusb_desc_other_speed_config,
+               (tud_speed_get() == TUSB_SPEED_HIGH) ? tusb_desc_fs_config
+                                                    : tusb_desc_hs_config,
+               TUSBD_DESC_TOTAL_LEN);
 
-    return tusb_desc_other_speed_config;
+        tusb_desc_other_speed_config[1] = TUSB_DESC_OTHER_SPEED_CONFIG;
+
+        return tusb_desc_other_speed_config;
+    }
+#if _TUD_CONFIG_DESC_NUMOF == 2
+    else if (index == _TUD_CONFIG_DESC_ALT_ID) {
+        /* If the link speed is HS, return the FS config, and vice versa.
+         * Note: the descriptor type is OHER_SPEED_CONFIG instead of CONFIG */
+        memcpy(tusb_desc_other_speed_config,
+               (tud_speed_get() == TUSB_SPEED_HIGH) ? tusb_desc_fs_config_alt
+                                                    : tusb_desc_hs_config_alt,
+               TUSBD_DESC_ALT_TOTAL_LEN);
+
+        tusb_desc_other_speed_config[1] = TUSB_DESC_OTHER_SPEED_CONFIG;
+
+        return tusb_desc_other_speed_config;
+    }
+#endif
+    return NULL;
 }
 
 #endif /* TUD_OPT_HIGH_SPEED */
@@ -407,15 +557,33 @@ uint8_t const *tud_descriptor_other_speed_configuration_cb(uint8_t index)
 __attribute__((weak))
 uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 {
-    (void)index;  /* for multiple configurations */
+    DEBUG("[tinyusb] %s: %u\n", __func__, index);
 
+    assert(index < _TUD_CONFIG_DESC_NUMOF);
+
+    if (index == _TUD_CONFIG_DESC_ID) {
 #if TUD_OPT_HIGH_SPEED
-    /* Although we are HS, host may be FS. */
-    return (tud_speed_get() == TUSB_SPEED_HIGH) ? tusb_desc_hs_config
-                                                : tusb_desc_fs_config;
-#else
-    return (uint8_t const *)tusb_desc_fs_config;
-#endif
+        /* Although we are HS, host may be FS. */
+        return (tud_speed_get() == TUSB_SPEED_HIGH) ? tusb_desc_hs_config
+                                                    : tusb_desc_fs_config;
+#else /* TUD_OPT_HIGH_SPEED */
+        return (uint8_t const *)tusb_desc_fs_config;
+#endif /* TUD_OPT_HIGH_SPEED */
+    }
+
+#if _TUD_CONFIG_DESC_NUMOF == 2
+    else if (index == _TUD_CONFIG_DESC_ALT_ID) {
+#if TUD_OPT_HIGH_SPEED
+        /* Although we are HS, host may be FS. */
+        return (tud_speed_get() == TUSB_SPEED_HIGH) ? tusb_desc_hs_config_alt
+                                                    : tusb_desc_fs_config_alt;
+#else /* TUD_OPT_HIGH_SPEED */
+        return (uint8_t const *)tusb_desc_fs_config_alt;
+#endif /* TUD_OPT_HIGH_SPEED */
+    }
+#endif /* _TUD_CONFIG_DESC_NUMOF == 2 */
+
+    return NULL;
 }
 
 /*
@@ -431,6 +599,26 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 #define CONFIG_TUSBD_CDC_1_STRING    "TinyUSB CDC1"
 #endif
 
+#ifndef CONFIG_TUSBD_CDC_ECM_STRING
+#define CONFIG_TUSBD_CDC_ECM_STRING  "TinyUSB CDC ECM"
+#endif
+
+#ifndef CONFIG_TUSBD_CDC_NCM_STRING
+#define CONFIG_TUSBD_CDC_NCM_STRING  "TinyUSB CDC NCM"
+#endif
+
+#ifndef CONFIG_TUSBD_DFU_0_STRING
+#define CONFIG_TUSBD_DFU_0_STRING    USB_DFU_MODE_SLOT0_NAME
+#endif
+
+#ifndef CONFIG_TUSBD_DFU_1_STRING
+#define CONFIG_TUSBD_DFU_1_STRING    USB_DFU_MODE_SLOT1_NAME
+#endif
+
+#ifndef CONFIG_TUSBD_DFU_RT_STRING
+#define CONFIG_TUSBD_DFU_RT_STRING   USB_APP_MODE_SLOT_NAME
+#endif
+
 #ifndef CONFIG_TUSBD_HID_0_STRING
 #define CONFIG_TUSBD_HID_0_STRING    "TinyUSB HID0 (Generic In/Out)"
 #endif
@@ -441,6 +629,14 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 
 #ifndef CONFIG_TUSBD_MSC_STRING
 #define CONFIG_TUSBD_MSC_STRING      "TinyUSB MSC"
+#endif
+
+#ifndef CONFIG_TUSBD_NET_DESC_STRING
+#define CONFIG_TUSBD_NET_DESC_STRING "TinyUSB Net"
+#endif
+
+#ifndef CONFIG_TUSBD_RNDIS_STRING
+#define CONFIG_TUSBD_RNDIS_STRING   "TinyUSB RNDIS"
 #endif
 
 #ifndef CONFIG_TUSBD_VENDOR_STRING
@@ -456,29 +652,53 @@ char const* tusb_string_desc_array[] = {
     },
     CONFIG_USB_MANUF_STR,           /* 1: Manufacturer */
     CONFIG_USB_PRODUCT_STR,         /* 2: Product */
-#if CONFIG_USB_SERIAL_STR
+#if CONFIG_USB_CUSTOM_SERIAL_STR
     CONFIG_USB_SERIAL_STR,          /* 3: Serial number as configured */
 #else
     NULL,                           /* 3: Serial number generated during runtime */
 #endif
 #if CONFIG_TUSBD_CDC_NUMOF > 0
-    CONFIG_TUSBD_CDC_0_STRING,       /* CDC Interface 0 */
+    CONFIG_TUSBD_CDC_0_STRING,      /* CDC Interface 0 */
 #endif
 #if CONFIG_TUSBD_CDC_NUMOF > 1
-    CONFIG_TUSBD_CDC_1_STRING,       /* CDC Interface 1 */
+    CONFIG_TUSBD_CDC_1_STRING,      /* CDC Interface 1 */
+#endif
+#if CONFIG_TUSBD_DFU_NUMOF
+    CONFIG_TUSBD_DFU_0_STRING,      /* DFU Firmware Slot 0 */
+    CONFIG_TUSBD_DFU_1_STRING,      /* DFU Firmware Slot 1 */
+#endif
+#if CONFIG_TUSBD_DFU_RT_NUMOF
+    CONFIG_TUSBD_DFU_RT_STRING,     /* APP mode */
 #endif
 #if CONFIG_TUSBD_HID_NUMOF > 0
-    CONFIG_TUSBD_HID_0_STRING,       /* HID Interface 0 */
+    CONFIG_TUSBD_HID_0_STRING,      /* HID Interface 0 */
 #endif
 #if CONFIG_TUSBD_HID_NUMOF > 1
-    CONFIG_TUSBD_HID_1_STRING,       /* HID Interface 1 */
+    CONFIG_TUSBD_HID_1_STRING,      /* HID Interface 1 */
 #endif
 #if CONFIG_TUSBD_MSC_NUMOF
-    CONFIG_TUSBD_MSC_STRING,         /* MSC Interface */
+    CONFIG_TUSBD_MSC_STRING,        /* MSC Interface */
 #endif
 #if CONFIG_TUSBD_VENDOR_NUMOF
-    CONFIG_TUSBD_VENDOR_STRING,      /* Vendor Interface */
+    CONFIG_TUSBD_VENDOR_STRING,     /* Vendor Interface */
 #endif
+
+#if CONFIG_TUSBD_NET_NUMOF
+#if CONFIG_TUSBD_NET_CDC_ECM
+CONFIG_TUSBD_CDC_ECM_STRING,        /* CDC ECM Interface */
+#endif /* CONFIG_TUSBD_NET_CDC_ECM */
+#if CONFIG_TUSBD_NET_CDC_NCM
+CONFIG_TUSBD_CDC_NCM_STRING,        /* CDC NCM Interface */
+#endif /* CONFIG_TUSBD_NET_CDC_NCM */
+#if CONFIG_TUSBD_NET_RNDIS
+CONFIG_TUSBD_RNDIS_STRING,          /* RNDIS Interface */
+#endif /* CONFIG_TUSBD_NET_RNDIS */
+#ifdef CONFIG_TUSBD_NET_CUSTOM_MAC
+    CONFIG_TUSBD_NET_MAC_STRING,    /* NET Interface MAC address */
+#else
+    NULL,
+#endif /* CONFIG_TUSBD_NET_CUSTOM_MAC */
+#endif /* CONFIG_TUSBD_NET_NUMOF */
 };
 
 static uint16_t _desc_str[32];
@@ -506,27 +726,41 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
 
         const char* str;
 
-#ifdef CONFIG_USB_SERIAL_STR
-        /* if serial string is configured, each member in tusb_string_desc_array can be used */
-        str = tusb_string_desc_array[index];
-#else
-        /* otherwise, a generated string has to be used in case of serial string index */
-        static char _serial_str[(CONFIG_USB_SERIAL_BYTE_LENGTH << 1) + 1];
-        static_assert(CONFIG_USB_SERIAL_BYTE_LENGTH <= UINT8_MAX/4,
-                      "USB serial byte length must be at most 63 due to protocol "
-                      "limitations");
-        if ((index == TUSBD_STR_IDX_SERIAL) && (strlen(_serial_str) == 0)) {
-            /* generate the serial string if it is not yet generated */
-            uint8_t luid_buf[CONFIG_USB_SERIAL_BYTE_LENGTH];
-            luid_get(luid_buf, sizeof(luid_buf));
-            fmt_bytes_hex(_serial_str, luid_buf, sizeof(luid_buf));
-            _serial_str[(CONFIG_USB_SERIAL_BYTE_LENGTH << 1)] = 0;
+        if ((index == TUSBD_STR_IDX_SERIAL) &&
+            (tusb_string_desc_array[index] == NULL)) {
+            /* otherwise, a generated string has to be used in case of serial string index */
+            static char _serial_str[(CONFIG_USB_SERIAL_BYTE_LENGTH << 1) + 1] = { };
+            static_assert(CONFIG_USB_SERIAL_BYTE_LENGTH <= UINT8_MAX/4,
+                          "USB serial byte length must be at most 63 due to protocol "
+                          "limitations");
+            if ((index == TUSBD_STR_IDX_SERIAL) && (strlen(_serial_str) == 0)) {
+                /* generate the serial string if it is not yet generated */
+                uint8_t luid_buf[CONFIG_USB_SERIAL_BYTE_LENGTH];
+                luid_get(luid_buf, sizeof(luid_buf));
+                fmt_bytes_hex(_serial_str, luid_buf, sizeof(luid_buf));
+                _serial_str[(CONFIG_USB_SERIAL_BYTE_LENGTH << 1)] = 0;
+            }
             str = _serial_str;
         }
+#if CONFIG_TUSBD_NET_NUMOF
+        else if ((index == TUSBD_STR_IDX_NET_MAC) &&
+                 (tusb_string_desc_array[index] == NULL)) {
+            /* generated MAC address string is used */
+            static char mac_str[(ETHERNET_ADDR_LEN << 1) + 1] = { };
+            if (strlen(mac_str) == 0) {
+                /* generate the serial string if it is not yet generated */
+                uint8_t luid_buf[ETHERNET_ADDR_LEN];
+                luid_get_eui48((eui48_t*)luid_buf);
+                fmt_bytes_hex(mac_str, luid_buf, sizeof(luid_buf));
+                mac_str[(ETHERNET_ADDR_LEN << 1)] = 0;
+            }
+            str = mac_str;
+        }
+#endif
         else {
             str = tusb_string_desc_array[index];
         }
-#endif
+
         /* cap at max char */
         chr_count = (uint8_t)strlen(str);
         if (chr_count > 31) {
@@ -540,9 +774,31 @@ uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid)
     }
 
     /* first byte is length (including header), second byte is string type */
-    _desc_str[0] = (uint16_t)((TUSB_DESC_STRING << 8 ) | (2*chr_count + 2));
+    _desc_str[0] = (uint16_t)((TUSB_DESC_STRING << 8 ) | (2 * chr_count + 2));
 
     return _desc_str;
 }
+
+#if !CONFIG_TUSBD_RNDIS
+__attribute__((weak))
+void rndis_class_set_handler(uint8_t *data, int size)
+{
+    (void)data;
+    (void)size;
+}
+
+__attribute__((weak))
+void tud_network_init_cb(void)
+{
+    printf("tud_network_init_cb");
+}
+
+__attribute__((weak))
+bool tud_network_recv_cb(const uint8_t *src, uint16_t size)
+{
+    printf("tud_network_init_cb %p %u", src, size);
+    return true;
+}
+#endif
 
 #endif /* !defined(CONFIG_TUSBD_USE_CUSTOM_DESC) */

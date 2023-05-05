@@ -17,12 +17,10 @@
  *
  * @}
  */
-
-#include "xtimer.h"
-
 #include <cerrno>
 #include <system_error>
 
+#include "ztimer64.h"
 #include "riot/thread.hpp"
 
 using namespace std;
@@ -70,10 +68,10 @@ unsigned thread::hardware_concurrency() noexcept {
 
 namespace this_thread {
 
-void sleep_for(const chrono::nanoseconds& ns) {
+void sleep_for(const chrono::microseconds& us) {
   using namespace chrono;
-  if (ns > nanoseconds::zero()) {
-    xtimer_usleep64(static_cast<uint64_t>(duration_cast<microseconds>(ns).count()));
+  if (us > microseconds::zero()) {
+    ztimer64_sleep(ZTIMER64_USEC, us.count());
   }
 }
 

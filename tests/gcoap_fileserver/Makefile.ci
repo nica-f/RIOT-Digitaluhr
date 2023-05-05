@@ -10,9 +10,9 @@ BOARD_INSUFFICIENT_MEMORY := \
     atxmega-a1-xplained \
     atxmega-a1u-xpro \
     atxmega-a3bu-xplained \
-    blackpill \
-    bluepill \
+    blackpill-stm32f103c8 \
     bluepill-stm32f030c8 \
+    bluepill-stm32f103c8 \
     derfmega128 \
     i-nucleo-lrwan1 \
     im880b \
@@ -33,6 +33,8 @@ BOARD_INSUFFICIENT_MEMORY := \
     samd10-xmini \
     saml10-xpro \
     saml11-xpro \
+    seeedstudio-gd32 \
+    sipeed-longan-nano \
     slstk3400a \
     stk3200 \
     stm32f030f4-demo \

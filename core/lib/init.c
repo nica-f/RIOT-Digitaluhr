@@ -29,6 +29,11 @@
 #include "log.h"
 #include "periph/pm.h"
 #include "thread.h"
+#include "stdio_base.h"
+
+#if IS_USED(MODULE_VFS)
+#include "vfs.h"
+#endif
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -55,7 +60,12 @@ static void *main_trampoline(void *arg)
         LOG_INFO(CONFIG_BOOT_MSG_STRING "\n");
     }
 
-    main();
+    int res = main();
+
+    if (IS_USED(MODULE_TEST_UTILS_MAIN_EXIT_CB)) {
+        void test_utils_main_exit_cb(int res);
+        test_utils_main_exit_cb(res);
+    }
 
 #ifdef MODULE_TEST_UTILS_PRINT_STACK_USAGE
     void print_stack_usage_metric(const char *name, void *stack, unsigned max_size);
@@ -101,4 +111,19 @@ void kernel_init(void)
     }
 
     cpu_switch_context_exit();
+}
+
+void early_init(void)
+{
+    /* initialize leds */
+    if (IS_USED(MODULE_PERIPH_INIT_LEDS)) {
+        extern void led_init(void);
+        led_init();
+    }
+
+    stdio_init();
+
+#if MODULE_VFS
+    vfs_bind_stdio();
+#endif
 }

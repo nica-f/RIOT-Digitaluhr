@@ -23,6 +23,8 @@
 #include <fcntl.h> /* for O_ACCMODE, ..., fcntl */
 #include <unistd.h> /* for STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO */
 
+#include "container.h"
+#include "modules.h"
 #include "vfs.h"
 #include "mutex.h"
 #include "thread.h"
@@ -545,7 +547,7 @@ int vfs_mount(vfs_mount_t *mountp)
     return 0;
 }
 
-int vfs_umount(vfs_mount_t *mountp)
+int vfs_umount(vfs_mount_t *mountp, bool force)
 {
     DEBUG("vfs_umount: %p\n", (void *)mountp);
     int ret = check_mount(mountp);
@@ -562,7 +564,7 @@ int vfs_umount(vfs_mount_t *mountp)
         return -EINVAL;
     }
     DEBUG("vfs_umount: -> \"%s\" open=%d\n", mountp->mount_point, atomic_load(&mountp->open_files));
-    if (atomic_load(&mountp->open_files) > 0) {
+    if (atomic_load(&mountp->open_files) > 0 && !force) {
         mutex_unlock(&_mount_mutex);
         return -EBUSY;
     }
@@ -1083,8 +1085,13 @@ static inline int _find_mount(vfs_mount_t **mountpp, const char *name, const cha
     atomic_fetch_add(&mountp->open_files, 1);
     mutex_unlock(&_mount_mutex);
     *mountpp = mountp;
+
     if (rel_path != NULL) {
-        *rel_path = name + longest_match;
+        if (mountp->fs->flags & VFS_FS_FLAG_WANT_ABS_PATH) {
+            *rel_path = name;
+        } else {
+            *rel_path = name + longest_match;
+        }
     }
     return 0;
 }
@@ -1186,6 +1193,13 @@ void auto_init_vfs(void)
     }
 }
 
+void auto_unmount_vfs(void)
+{
+    for (unsigned i = 0; i < MOUNTPOINTS_NUMOF; ++i) {
+        vfs_umount(&vfs_mountpoints_xfa[i], true);
+    }
+}
+
 int vfs_mount_by_path(const char *path)
 {
     for (unsigned i = 0; i < MOUNTPOINTS_NUMOF; ++i) {
@@ -1197,11 +1211,11 @@ int vfs_mount_by_path(const char *path)
     return -ENOENT;
 }
 
-int vfs_unmount_by_path(const char *path)
+int vfs_unmount_by_path(const char *path, bool force)
 {
     for (unsigned i = 0; i < MOUNTPOINTS_NUMOF; ++i) {
         if (strcmp(path, vfs_mountpoints_xfa[i].mount_point) == 0) {
-            return vfs_umount(&vfs_mountpoints_xfa[i]);
+            return vfs_umount(&vfs_mountpoints_xfa[i], force);
         }
     }
 

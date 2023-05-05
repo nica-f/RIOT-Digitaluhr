@@ -89,8 +89,11 @@ extern "C" {
 #ifndef _MAX
 #define _MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
-#ifndef MAX4
-#define MAX4(a, b, c, d) _MAX(_MAX((a), (b)), _MAX((c),(d)))
+#ifndef MAX5
+/**
+ * @brief   MAX5 Function to get the largest of 5 values
+ */
+#define MAX5(a, b, c, d, e) _MAX(_MAX(_MAX((a), (b)), _MAX((c),(d))), (e))
 #endif
 /** @} */
 
@@ -174,6 +177,19 @@ extern "C" {
 #endif
 /** @} */
 
+/**
+ * @brief   VFS parameters for lwext4
+ * @{
+ */
+#if defined(MODULE_LWEXT4) || DOXYGEN
+#define LWEXT4_VFS_DIR_BUFFER_SIZE      (308)   /**< sizeof(ext4_dir)  */
+#define LWEXT4_VFS_FILE_BUFFER_SIZE     (32)    /**< sizeof(ext4_file) */
+#else
+#define LWEXT4_VFS_DIR_BUFFER_SIZE      (1)
+#define LWEXT4_VFS_FILE_BUFFER_SIZE     (1)
+#endif
+/** @} */
+
 #ifndef VFS_MAX_OPEN_FILES
 /**
  * @brief Maximum number of simultaneous open files
@@ -209,10 +225,11 @@ extern "C" {
  * @attention Put the check in the public header file (.h), do not put the check in the
  * implementation (.c) file.
  */
-#define VFS_DIR_BUFFER_SIZE MAX4(FATFS_VFS_DIR_BUFFER_SIZE,     \
+#define VFS_DIR_BUFFER_SIZE MAX5(FATFS_VFS_DIR_BUFFER_SIZE,     \
                                  LITTLEFS_VFS_DIR_BUFFER_SIZE,  \
                                  LITTLEFS2_VFS_DIR_BUFFER_SIZE, \
-                                 SPIFFS_VFS_DIR_BUFFER_SIZE     \
+                                 SPIFFS_VFS_DIR_BUFFER_SIZE,    \
+                                 LWEXT4_VFS_DIR_BUFFER_SIZE     \
                                 )
 #endif
 
@@ -236,10 +253,11 @@ extern "C" {
  * @attention Put the check in the public header file (.h), do not put the check in the
  * implementation (.c) file.
  */
-#define VFS_FILE_BUFFER_SIZE MAX4(FATFS_VFS_FILE_BUFFER_SIZE,    \
+#define VFS_FILE_BUFFER_SIZE MAX5(FATFS_VFS_FILE_BUFFER_SIZE,    \
                                   LITTLEFS_VFS_FILE_BUFFER_SIZE, \
                                   LITTLEFS2_VFS_FILE_BUFFER_SIZE,\
-                                  SPIFFS_VFS_FILE_BUFFER_SIZE    \
+                                  SPIFFS_VFS_FILE_BUFFER_SIZE,   \
+                                  LWEXT4_VFS_FILE_BUFFER_SIZE    \
                                  )
 #endif
 
@@ -317,12 +335,18 @@ typedef struct vfs_mount_struct vfs_mount_t;
 extern const vfs_file_ops_t mtd_vfs_ops;
 
 /**
+ * @brief   File system always wants the full VFS path
+ */
+#define VFS_FS_FLAG_WANT_ABS_PATH   (1 << 0)
+
+/**
  * @brief A file system driver
  */
 typedef struct {
     const vfs_file_ops_t *f_op;         /**< File operations table */
     const vfs_dir_ops_t *d_op;          /**< Directory operations table */
     const vfs_file_system_ops_t *fs_op; /**< File system operations table */
+    const uint32_t flags;               /**< File system flags */
 } vfs_file_system_t;
 
 /**
@@ -945,11 +969,12 @@ int vfs_mount_by_path(const char *path);
  * @note This assumes mount points have been configured with @ref VFS_AUTO_MOUNT.
  *
  * @param[in]  path     Path of the pre-configured mount point
+ * @param[in]  force    Unmount the filesystem even if there are still open files
  *
  * @return 0 on success
  * @return <0 on error
  */
-int vfs_unmount_by_path(const char *path);
+int vfs_unmount_by_path(const char *path, bool force);
 
 /**
  * @brief Rename a file
@@ -972,11 +997,12 @@ int vfs_rename(const char *from_path, const char *to_path);
  * This will fail if there are any open files or directories on the mounted file system
  *
  * @param[in]  mountp    pointer to the mount structure of the file system to unmount
+ * @param[in]  force    Unmount the filesystem even if there are still open files
  *
  * @return 0 on success
  * @return <0 on error
  */
-int vfs_umount(vfs_mount_t *mountp);
+int vfs_umount(vfs_mount_t *mountp, bool force);
 
 /**
  * @brief Unlink (delete) a file from a mounted file system

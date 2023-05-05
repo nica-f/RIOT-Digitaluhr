@@ -8,16 +8,22 @@ BOARD_INSUFFICIENT_MEMORY := \
     atmega1284p \
     atmega328p \
     atmega328p-xplained-mini \
+    atxmega-a1-xplained \
+    atxmega-a1u-xpro \
     atxmega-a3bu-xplained \
-    blackpill \
-    bluepill \
+    b-l072z-lrwan1 \
+    blackpill-stm32f103c8 \
+    blackpill-stm32f103cb \
     bluepill-stm32f030c8 \
+    bluepill-stm32f103c8 \
+    bluepill-stm32f103cb \
     calliope-mini \
     derfmega128 \
     hifive1 \
     hifive1b \
     i-nucleo-lrwan1 \
     im880b \
+    lsn50 \
     mega-xplained \
     microbit \
     microduino-corerf \

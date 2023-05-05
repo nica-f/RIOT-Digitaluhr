@@ -1,19 +1,7 @@
-ifeq ($(CPU),esp8266)
-  ifneq (,$(filter esp_log_colored,$(USEMODULE)))
-    BOOTLOADER_COLOR = _colors
-  endif
-  ifneq (,$(filter esp_log_startup,$(USEMODULE)))
-    BOOTLOADER_INFO = _info
-  endif
-  # Full path to the bootloader binary. In the ESP32 case this is set by the
-  # esp_bootloader module.
-  BOOTLOADER_BIN ?= $(RIOTCPU)/$(CPU)/bin/bootloader$(BOOTLOADER_COLOR)$(BOOTLOADER_INFO).bin
-else
-  # ESP-IDF uses dio as flash mode for esptool.py when qout or qio mode are
-  # configured to always boot in dual SPI mode
-  ifneq (,$(filter qout qio,$(FLASH_MODE)))
-    FLASH_MODE = dio
-  endif
+# ESP-IDF uses dio as flash mode for esptool.py when qout or qio mode are
+# configured to always boot in dual SPI mode
+ifneq (,$(filter qout qio,$(FLASH_MODE)))
+  FLASH_MODE = dio
 endif
 
 ESPTOOL ?= $(RIOTTOOLS)/esptools/esptool.py
@@ -32,19 +20,19 @@ else
   FFLAGS += --flash_size detect
   FFLAGS += $(BOOTLOADER_POS) $(BOOTLOADER_BIN)
   FFLAGS += 0x8000 $(BINDIR)/partitions.bin
-  FFLAGS += 0x10000 $(FLASHFILE)
+  FFLAGS += $(FLASHFILE_POS) $(FLASHFILE)
 endif
 
 .PHONY: esp-qemu
 
-esp-qemu:
+esp-qemu: $(FLASHFILE)
 ifeq (esp32,$(CPU))
 	$(Q)echo \
 		"--flash_mode $(FLASH_MODE) --flash_freq $(FLASH_FREQ) " \
 		"--flash_size $(FLASH_SIZE)MB" \
 		"$(BOOTLOADER_POS) $(BOOTLOADER_BIN)" \
 		"0x8000 $(BINDIR)/partitions.bin" \
-		"0x10000 $(FLASHFILE)" > $(BINDIR)/qemu_flash_args
+		"$(FLASHFILE_POS) $(FLASHFILE)" > $(BINDIR)/qemu_flash_args
 	$(Q)$(ESPTOOL) \
 		--chip $(CPU_FAM) merge_bin \
 		--fill-flash-size 4MB \
@@ -58,7 +46,7 @@ else
 		cat - $(BOOTLOADER_BIN) tmp.bin | \
 		head -c $$((0x8000)) | \
 		cat - $(BINDIR)/partitions.bin tmp.bin | \
-		head -c $$((0x10000)) | \
+		head -c $$(($(FLASHFILE_POS))) | \
 		cat - $(FLASHFILE) tmp.bin | \
 		head -c $(FLASH_SIZE)MB > $(BINDIR)/$(CPU)flash.bin && rm tmp.bin
 endif

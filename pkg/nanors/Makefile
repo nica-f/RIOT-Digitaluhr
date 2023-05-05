@@ -1,6 +1,6 @@
 PKG_NAME=nanors
 PKG_URL=https://github.com/sleepybishop/nanors.git
-PKG_VERSION=389007b64a66f1c0c38c13bc510da1173cfe6097
+PKG_VERSION=e9e242e98e27037830490b2a752895ca68f75f8b
 PKG_LICENSE=MIT
 
 include $(RIOTBASE)/pkg/pkg.mk

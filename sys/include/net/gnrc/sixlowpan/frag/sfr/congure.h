@@ -15,7 +15,10 @@
  * When included, this module enables congestion control for 6LoWPAN Selective Fragment Recovery
  * (SFR). The flavor of congestion control can be selected using the following sub-modules:
  *
- * - TBD
+ * - @ref net_gnrc_sixlowpan_frag_sfr_congure_sfr (the default)
+ * - @ref net_gnrc_sixlowpan_frag_sfr_congure_quic
+ * - @ref net_gnrc_sixlowpan_frag_sfr_congure_reno
+ * - @ref net_gnrc_sixlowpan_frag_sfr_congure_abe
  * @{
  *
  * @file
@@ -30,7 +33,7 @@
 #include <stdlib.h>
 
 #include "congure.h"
-#include "kernel_defines.h"
+#include "modules.h"
 #include "net/gnrc/sixlowpan/frag/sfr.h"
 
 #ifdef __cplusplus

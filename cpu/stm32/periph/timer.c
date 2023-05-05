@@ -128,7 +128,34 @@ int timer_set_absolute(tim_t tim, int channel, unsigned int value)
     unsigned irqstate = irq_disable();
     set_oneshot(tim, channel);
 
+#ifdef MODULE_PERIPH_TIMER_PERIODIC
+    if (dev(tim)->ARR == TIM_CHAN(tim, channel)) {
+        dev(tim)->ARR = timer_config[tim].max;
+    }
+#endif
+
+    /* clear spurious IRQs */
+    dev(tim)->SR &= ~(TIM_SR_CC1IF << channel);
+
     TIM_CHAN(tim, channel) = (value & timer_config[tim].max);
+
+    /* enable IRQ */
+    dev(tim)->DIER |= (TIM_DIER_CC1IE << channel);
+    irq_restore(irqstate);
+
+    return 0;
+}
+
+int timer_set(tim_t tim, int channel, unsigned int timeout)
+{
+    unsigned value = (dev(tim)->CNT + timeout) & timer_config[tim].max;
+
+    if (channel >= (int)TIMER_CHANNEL_NUMOF) {
+        return -1;
+    }
+
+    unsigned irqstate = irq_disable();
+    set_oneshot(tim, channel);
 
 #ifdef MODULE_PERIPH_TIMER_PERIODIC
     if (dev(tim)->ARR == TIM_CHAN(tim, channel)) {
@@ -139,8 +166,20 @@ int timer_set_absolute(tim_t tim, int channel, unsigned int value)
     /* clear spurious IRQs */
     dev(tim)->SR &= ~(TIM_SR_CC1IF << channel);
 
+    TIM_CHAN(tim, channel) = value;
+
     /* enable IRQ */
     dev(tim)->DIER |= (TIM_DIER_CC1IE << channel);
+
+    /* calculate time till timeout */
+    value = (value - dev(tim)->CNT) & timer_config[tim].max;
+
+    if (value > timeout) {
+        /* time till timeout is larger than requested --> timer already expired
+         * ==> let's make sure we have an IRQ pending :) */
+        dev(tim)->EGR |= (TIM_EGR_CC1G << channel);
+    }
+
     irq_restore(irqstate);
 
     return 0;
@@ -228,7 +267,12 @@ static inline void irq_handler(tim_t tim)
 {
     uint32_t top = dev(tim)->ARR;
     uint32_t status = dev(tim)->SR & dev(tim)->DIER;
-    dev(tim)->SR = 0;
+
+    /* clear interrupts which we are about to service */
+    /* Note, the flags in the SR register can be cleared by software, but
+     * setting them has no effect on the register. Only the hardware can set
+     * them. */
+    dev(tim)->SR = ~status;
 
     for (unsigned int i = 0; status; i++) {
         uint32_t msk = TIM_SR_CC1IF << i;

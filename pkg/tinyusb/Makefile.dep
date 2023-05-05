@@ -8,9 +8,44 @@ USEMODULE += tinyusb_hw
 
 DEFAULT_MODULE += auto_init_tinyusb
 
+ifneq (,$(filter riotboot_tinyusb_dfu, $(USEMODULE)))
+  FEATURES_REQUIRED += no_idle_thread
+  FEATURES_REQUIRED += periph_pm
+  USEMODULE += riotboot_flashwrite
+  USEMODULE += tinyusb_dfu
+  USEMODULE += ztimer_sec
+endif
+
 ifneq (,$(filter stdio_tinyusb_cdc_acm, $(USEMODULE)))
+  USEMODULE += stdio_available
   USEMODULE += tinyusb_class_cdc
   USEMODULE += tinyusb_device
+endif
+
+ifneq (,$(filter tinyusb_dfu,$(USEMODULE)))
+  ifneq (,$(filter riotboot_tinyusb_dfu,$(USEMODULE)))
+    USEMODULE += tinyusb_class_dfu
+  else
+    USEMODULE += tinyusb_class_dfu_runtime
+  endif
+endif
+
+ifneq (,$(filter tinyusb_class_net_%,$(USEMODULE)))
+  USEMODULE += tinyusb_class_net
+endif
+
+ifneq (,$(filter tinyusb_netdev,$(USEMODULE)))
+  USEMODULE += luid
+  USEMODULE += netdev_eth
+  USEMODULE += tinyusb_device
+  ifeq (,$(filter tinyusb_class_net_%,$(USEMODULE)))
+    # default to CDC ECM
+    USEMODULE += tinyusb_class_net_cdc_ecm
+  endif
+endif
+
+ifneq (,$(filter tinyusb_class_net_rndis,$(USEMODULE)))
+  USEMODULE += tinyusb_lib_networking
 endif
 
 ifeq (,$(filter tinyusb_class_%,$(USEMODULE)))
@@ -29,31 +64,28 @@ endif
 
 # Following device classes work only with tinyUSB device stack
 ifneq (,$(filter tinyusb_class_audio,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
+  USEMODULE += tinyusb_device
 endif
 ifneq (,$(filter tinyusb_class_bth,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
+  USEMODULE += tinyusb_device
 endif
 ifneq (,$(filter tinyusb_class_dfu,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
+  USEMODULE += tinyusb_device
 endif
 ifneq (,$(filter tinyusb_class_dfu_runtime,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
+  USEMODULE += tinyusb_device
 endif
 ifneq (,$(filter tinyusb_class_midi,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
+  USEMODULE += tinyusb_device
 endif
-ifneq (,$(filter tinyusb_class_net_ecm_rndis,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
-endif
-ifneq (,$(filter tinyusb_class_net_ncm,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
+ifneq (,$(filter tinyusb_class_net,$(USEMODULE)))
+  USEMODULE += tinyusb_device
 endif
 ifneq (,$(filter tinyusb_class_usbtmc,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
+  USEMODULE += tinyusb_device
 endif
 ifneq (,$(filter tinyusb_class_video,$(USEMODULE)))
-  FEATURES_REQUIRED += tinyusb_device
+  USEMODULE += tinyusb_device
 endif
 
 # tinyUSB hardware driver selection
@@ -83,6 +115,8 @@ else ifeq (stm32,$(CPU))
     # all other STM32 with USB interface use USB FS Device core
     USEMODULE += tinyusb_portable_stm32_fsdev
   endif
+else ifeq (gd32v,$(CPU))
+  USEMODULE += tinyusb_portable_synopsys_dwc2
 endif
 
 # other module dependencies

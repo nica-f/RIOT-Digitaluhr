@@ -24,6 +24,39 @@ else
   $(error Unkwnown ESP32x SoC variant (family))
 endif
 
+ifneq (,$(filter periph_flashpage,$(USEMODULE)))
+  ifneq (,$(CONFIG_ESP_FLASHPAGE_CAPACITY_64K))
+    FLASHFILE_POS = 0x20000
+    FLASHPAGE_CAP = 0x10000
+  else ifneq (,$(CONFIG_ESP_FLASHPAGE_CAPACITY_128K))
+    FLASHFILE_POS = 0x30000
+    FLASHPAGE_CAP = 0x20000
+  else ifneq (,$(CONFIG_ESP_FLASHPAGE_CAPACITY_256K))
+    FLASHFILE_POS = 0x50000
+    FLASHPAGE_CAP = 0x40000
+  else ifneq (,$(CONFIG_ESP_FLASHPAGE_CAPACITY_512K))
+    FLASHFILE_POS = 0x90000
+    FLASHPAGE_CAP = 0x80000
+  else ifneq (,$(CONFIG_ESP_FLASHPAGE_CAPACITY_1M))
+    FLASHFILE_POS = 0x110000
+    FLASHPAGE_CAP = 0x100000
+  else ifneq (,$(CONFIG_ESP_FLASHPAGE_CAPACITY_2M))
+    FLASHFILE_POS = 0x210000
+    FLASHPAGE_CAP = 0x200000
+  else
+    # use 512 kByte for periph_flashpage by default
+    FLASHFILE_POS = 0x90000
+    FLASHPAGE_CAP = 0x80000
+    CFLAGS += -DCONFIG_ESP_FLASHPAGE_CAPACITY_512K
+  endif
+  FLASHPAGE_ADDR_START = 0x10000
+  FLASHPAGE_ADDR_END = $(FLASHFILE_POS)
+  CFLAGS += -DFLASHPAGE_ADDR_START=$(FLASHPAGE_ADDR_START)
+  CFLAGS += -DFLASHPAGE_ADDR_END=$(FLASHPAGE_ADDR_END)
+endif
+
+FLASHFILE_POS ?= 0x10000
+
 ESPTOOL ?= $(RIOTTOOLS)/esptools/esptool_v3.2.py
 
 include $(RIOTCPU)/esp_common/Makefile.include
@@ -49,6 +82,7 @@ PSEUDOMODULES += esp_rtc_timer_32k
 PSEUDOMODULES += esp_spi_ram
 PSEUDOMODULES += esp_spi_oct
 PSEUDOMODULES += esp_wifi_enterprise
+PSEUDOMODULES += stdio_usb_serial_jtag_rx
 
 INCLUDES += -I$(RIOTCPU)/$(CPU)/esp-idf/include
 INCLUDES += -I$(RIOTCPU)/$(CPU)/esp-idf/include/log
@@ -74,6 +108,7 @@ INCLUDES += -I$(ESP32_SDK_DIR)/components/log/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/newlib/platform_include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/soc/include
 INCLUDES += -I$(ESP32_SDK_DIR)/components/soc/$(CPU_FAM)/include
+INCLUDES += -I$(ESP32_SDK_DIR)/components/spi_flash/include
 
 ifneq (,$(filter riscv32%,$(TARGET_ARCH)))
   INCLUDES += -I$(ESP32_SDK_DIR)/components/riscv/include
@@ -151,6 +186,19 @@ else ifeq (120m,$(FLASH_FREQ))
   CFLAGS += -DCONFIG_ESPTOOLPY_FLASHFREQ_120M
 endif
 
+#extend CFLAGS by the corresponding FLASH_SIZE
+ifeq (1,$(FLASH_SIZE))
+  CFLAGS += -DCONFIG_ESPTOOLPY_FLASHSIZE_1MB
+else ifeq (2,$(FLASH_SIZE))
+  CFLAGS += -DCONFIG_ESPTOOLPY_FLASHSIZE_2MB
+else ifeq (4,$(FLASH_SIZE))
+  CFLAGS += -DCONFIG_ESPTOOLPY_FLASHSIZE_4MB
+else ifeq (8,$(FLASH_SIZE))
+  CFLAGS += -DCONFIG_ESPTOOLPY_FLASHSIZE_8MB
+else ifeq (16,$(FLASH_SIZE))
+  CFLAGS += -DCONFIG_ESPTOOLPY_FLASHSIZE_16MB
+endif
+
 # shortcuts used by ESP-IDF
 CFLAGS += -Dasm=__asm
 CFLAGS += -Dtypeof=__typeof__
@@ -159,6 +207,13 @@ CFLAGS += -D_CONST=const
 # TODO no relaxation yet
 ifneq (,$(filter riscv%,$(TARGET_ARCH)))
   CFLAGS += -mno-relax -march=rv32imc -mabi=ilp32 -DRISCV_NO_RELAX
+  GCC_NEW_RISCV_ISA ?= $(shell echo "typedef int dont_be_pedantic;" | \
+                               $(TARGET_ARCH)-gcc -march=rv32imac -mabi=ilp32 \
+                                                  -misa-spec=2.2 -E - > /dev/null 2>&1 && \
+                               echo 1 || echo 0)
+  ifeq (1,$(GCC_NEW_RISCV_ISA))
+    CFLAGS += -misa-spec=2.2
+  endif
 endif
 
 ifneq (,$(filter xtensa%,$(TARGET_ARCH)))
@@ -168,12 +223,8 @@ endif
 
 LINKFLAGS += -L$(RIOTCPU)/$(CPU)/ld/$(CPU_FAM)/
 
-ifneq (,$(filter esp32_sdk_lib_bt_esp32,$(USEPKG)))
-  LINKFLAGS += -T$(RIOTCPU)/$(CPU)/ld/$(CPU_FAM)/memory_bt.ld
-else
-  LINKFLAGS += -T$(RIOTCPU)/$(CPU)/ld/$(CPU_FAM)/memory.ld
-endif
-LINKFLAGS += -T$(RIOTCPU)/$(CPU)/ld/$(CPU_FAM)/sections.ld
+LINKFLAGS += -T$(BINDIR)/memory.ld
+LINKFLAGS += -T$(BINDIR)/sections.ld
 
 LINKFLAGS += -T$(ESP32_SDK_DIR)/components/soc/$(CPU_FAM)/ld/$(CPU_FAM).peripherals.ld
 LINKFLAGS += -T$(ESP32_SDK_DIR)/components/esp_rom/$(CPU_FAM)/ld/$(CPU_FAM).rom.api.ld
@@ -198,6 +249,12 @@ else
 endif
 
 LINKFLAGS += -nostdlib -lgcc -Wl,-gc-sections
+
+# all ESP32x SoCs have to load executable code into IRAM
+# warning 'LOAD segment with RWX permissions' has to be disabled therefore
+ifeq (1,$(GCC_NEW_RISCV_ISA))
+  LINKFLAGS += -Wl,--no-warn-rwx-segments
+endif
 
 # Libraries needed when using esp_wifi_any pseudomodule
 ifneq (,$(filter esp_wifi_any,$(USEMODULE)))
@@ -244,11 +301,21 @@ ifneq (,$(filter esp_jtag,$(USEMODULE)))
     -c 'flash write_image erase "$(BOOTLOADER_BIN)" $(BOOTLOADER_POS) bin' \
     -c 'echo "Installing partition table at $(PARTITION_POS)"' \
     -c 'flash write_image erase "$(BINDIR)/partitions.bin" $(PARTITION_POS) bin'
-  IMAGE_OFFSET = 0x10000
+  IMAGE_OFFSET = $(FLASHFILE_POS)
   # Flash checksumming not supported on xtensa
   OPENOCD_SKIP_VERIFY = yes
   # Without resets debug target fails with 'Target not examined yet'
   OPENOCD_DBG_EXTRA_CMD += -c 'reset halt'
 endif
+
+LD_SCRIPTS += $(BINDIR)/memory.ld $(BINDIR)/sections.ld
+
+$(BINDIR)/memory.ld: $(RIOTCPU)/$(CPU)/ld/$(CPU_FAM)/memory.ld.in \
+                     $(BINDIR)/riotbuild/riotbuild.h pkg-prepare
+	$(Q)$(CC) -DLD_FILE_GEN $(INCLUDES) -include '$(BINDIR)/riotbuild/riotbuild.h' \
+				-I$(RIOTCPU)/$(CPU)/ld -P -x c -E $< -o $@
+$(BINDIR)/sections.ld: $(RIOTCPU)/$(CPU)/ld/$(CPU_FAM)/sections.ld.in \
+                       $(BINDIR)/riotbuild/riotbuild.h pkg-prepare
+	$(Q)$(CC) -DLD_FILE_GEN -include '$(BINDIR)/riotbuild/riotbuild.h' -C -P -x c -E $< -o $@
 
 $(BOOTLOADER_BIN):

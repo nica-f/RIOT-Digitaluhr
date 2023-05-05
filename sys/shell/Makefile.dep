@@ -1,13 +1,4 @@
-ifneq (,$(filter shell_cmd_%,$(USEMODULE)))
-  # each and every command is a submodule of shell_cmds
-  USEMODULE += shell_cmds
-endif
-
-ifneq (,$(filter shell_commands,$(USEMODULE)))
-  # shell_commands has been renamed to shell_cmds_default, but let's keep this
-  # for backward compatibility
-  USEMODULE += shell_cmds_default
-endif
+USEMODULE += stdin
 
 ifneq (,$(filter shell_cmds_default,$(USEMODULE)))
   USEMODULE += shell_cmd_sys
@@ -129,9 +120,6 @@ ifneq (,$(filter shell_cmds_default,$(USEMODULE)))
   ifneq (,$(filter sht1x,$(USEMODULE)))
     USEMODULE += shell_cmd_sht1x
   endif
-  ifneq (,$(filter suit_transport_worker,$(USEMODULE)))
-    USEMODULE += shell_cmd_suit
-  endif
   ifneq (,$(filter vfs,$(USEMODULE)))
     USEMODULE += shell_cmd_vfs
   endif
@@ -225,6 +213,7 @@ endif
 ifneq (,$(filter shell_cmd_nanocoap_vfs,$(USEMODULE)))
   USEMODULE += nanocoap_vfs
   USEMODULE += vfs_util
+  USEMODULE += nanocoap_link_format
 endif
 ifneq (,$(filter shell_cmd_netstats_neighbor,$(USEMODULE)))
   USEMODULE += netstats_neighbor

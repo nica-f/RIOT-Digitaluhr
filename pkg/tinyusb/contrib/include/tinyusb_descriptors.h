@@ -41,6 +41,12 @@ enum {
     TUSBD_ITF_CDC_1,        /**< CDC1 Notification interface */
     TUSBD_ITF_CDC_1_DATA,   /**< CDC1 Data interface */
 #endif
+#if CONFIG_TUSBD_DFU_NUMOF
+    TUSBD_ITF_DFU,          /**< DFU interface */
+#endif
+#if CONFIG_TUSBD_DFU_RT_NUMOF
+    TUSBD_ITF_DFU_RT,       /**< DFU Runtime interface */
+#endif
 #if CONFIG_TUSBD_HID_NUMOF > 0
     TUSBD_ITF_HID_0,        /**< HID0 interface */
 #endif
@@ -49,6 +55,10 @@ enum {
 #endif
 #if CONFIG_TUSBD_MSC_NUMOF
     TUSBD_ITF_MSC,          /**< MSC interface */
+#endif
+#if CONFIG_TUSBD_NET_NUMOF
+    TUSBD_ITF_NET,          /**< NET Notification interface */
+    TUSBD_ITF_NET_DATA,     /**< NET Data interface */
 #endif
 #if CONFIG_TUSBD_VENDOR_NUMOF
     TUSBD_ITF_VENDOR,       /**< Vendor interface */
@@ -81,6 +91,11 @@ enum {
     TUSBD_EP_MSC_OUT     = TUSBD_ITF_MSC + 0x01,        /**< MSC EP OUT */
     TUSBD_EP_MSC_IN      = TUSBD_ITF_MSC + 0x81,        /**< MSC EP IN */
 #endif
+#if CONFIG_TUSBD_NET_NUMOF
+    TUSBD_EP_NET_NOTIF   = TUSBD_ITF_NET + 0x81,        /**< NET Notification EP IN */
+    TUSBD_EP_NET_OUT     = TUSBD_ITF_NET_DATA + 0x01,   /**< NET Data EP OUT */
+    TUSBD_EP_NET_IN      = TUSBD_ITF_NET_DATA + 0x81,   /**< NET Data EP IN */
+#endif
 #if CONFIG_TUSBD_VENDOR_NUMOF
     TUSBD_EP_VENDOR_OUT  = TUSBD_ITF_VENDOR + 0x01,     /**< Vendor EP OUT */
     TUSBD_EP_VENDOR_IN   = TUSBD_ITF_VENDOR + 0x81,     /**< Vendor EP IN */
@@ -101,6 +116,13 @@ enum {
 #if CONFIG_TUSBD_CDC_NUMOF > 1
     TUSBD_STR_IDX_CDC_1,
 #endif
+#if CONFIG_TUSBD_DFU_NUMOF
+    TUSBD_STR_IDX_DFU_SLOT_0,
+    TUSBD_STR_IDX_DFU_SLOT_1,
+#endif
+#if CONFIG_TUSBD_DFU_RT_NUMOF
+    TUSBD_STR_IDX_DFU_RT,
+#endif
 #if CONFIG_TUSBD_HID_NUMOF > 0
     TUSBD_STR_IDX_HID_0,
 #endif
@@ -110,6 +132,20 @@ enum {
 #if CONFIG_TUSBD_MSC_NUMOF
     TUSBD_STR_IDX_MSC,
 #endif
+
+#if CONFIG_TUSBD_NET_NUMOF
+#if CONFIG_TUSBD_NET_CDC_ECM
+    TUSBD_STR_IDX_NET_CDC_ECM,
+#endif /* CONFIG_TUSBD_NET_CDC_ECM */
+#if CONFIG_TUSBD_NET_CDC_NCM
+    TUSBD_STR_IDX_NET_CDC_NCM,
+#endif /* CONFIG_TUSBD_NET_CDC_NCM */
+#if CONFIG_TUSBD_NET_RNDIS
+    TUSBD_STR_IDX_NET_RNDIS,
+#endif /* CONFIG_TUSBD_NET_RNDIS */
+    TUSBD_STR_IDX_NET_MAC,
+#endif /* CONFIG_TUSBD_NET_NUMOF */
+
 #if CONFIG_TUSBD_VENDOR_NUMOF
     TUSBD_STR_IDX_VENDOR,
 #endif
@@ -117,22 +153,50 @@ enum {
 };
 #endif /* !defined(HAVE_TUSBD_STR_IDX_TYPE) */
 
+/* only two slots are supported */
+#define CONFIG_TUSBD_DFU_ALT_NUMOF  2
+
 #if !defined(TUSBD_DESC_TOTAL_LEN)
-#define TUSBD_DESC_CDC_0_LEN  ((CONFIG_TUSBD_CDC_NUMOF > 0) ? TUD_CDC_DESC_LEN : 0)
-#define TUSBD_DESC_CDC_1_LEN  ((CONFIG_TUSBD_CDC_NUMOF > 1) ? TUD_CDC_DESC_LEN : 0)
-#define TUSBD_DESC_HID_0_LEN  ((CONFIG_TUSBD_HID_NUMOF > 0) ? TUD_HID_INOUT_DESC_LEN : 0)
-#define TUSBD_DESC_HID_1_LEN  ((CONFIG_TUSBD_HID_NUMOF > 1) ? TUD_HID_INOUT_DESC_LEN : 0)
-#define TUSBD_DESC_MSC_LEN    ((CONFIG_TUSBD_MSC_NUMOF > 0) ? TUD_MSC_DESC_LEN : 0)
-#define TUSBD_DESC_VENDOR_LEN ((CONFIG_TUSBD_VENDOR_NUMOF > 0) ? TUD_VENDOR_DESC_LEN : 0)
+
+#if CONFIG_TUSBD_NET_CDC_ECM
+#define TUSBD_DESC_NET_LEN    TUD_CDC_ECM_DESC_LEN
+#elif CONFIG_TUSBD_NET_CDC_NCM
+#define TUSBD_DESC_NET_LEN    TUD_CDC_NCM_DESC_LEN
+#elif CONFIG_TUSBD_NET_RNDIS
+#define TUSBD_DESC_NET_LEN    TUD_RNDIS_DESC_LEN
+#else
+#define TUSBD_DESC_NET_LEN    0
+#endif
 
 #define TUSBD_DESC_TOTAL_LEN (TUD_CONFIG_DESC_LEN + \
-                              TUSBD_DESC_CDC_0_LEN + \
-                              TUSBD_DESC_CDC_1_LEN + \
-                              TUSBD_DESC_HID_0_LEN + \
-                              TUSBD_DESC_HID_1_LEN + \
-                              TUSBD_DESC_MSC_LEN + \
-                              TUSBD_DESC_VENDOR_LEN)
+                              (CONFIG_TUSBD_CDC_NUMOF * TUD_CDC_DESC_LEN) + \
+                              (CONFIG_TUSBD_DFU_NUMOF * TUD_DFU_DESC_LEN(CONFIG_TUSBD_DFU_ALT_NUMOF)) + \
+                              (CONFIG_TUSBD_DFU_RT_NUMOF * TUD_DFU_RT_DESC_LEN) + \
+                              (CONFIG_TUSBD_HID_NUMOF * TUD_HID_INOUT_DESC_LEN) + \
+                              (CONFIG_TUSBD_MSC_NUMOF * TUD_MSC_DESC_LEN) + \
+                              (CONFIG_TUSBD_VENDOR_NUMOF * TUD_VENDOR_DESC_LEN) + \
+                              TUSBD_DESC_NET_LEN)
+
 #endif /* !defined(TUSBD_DESC_TOTAL_LEN) */
+
+/* If CDC ECM and RNDIS are used simultaneously, an alternative configuration
+ * descriptor is required. In this case, the main configuration descriptor
+ * contains the CDC ECM interface descriptor and the alternative configuration
+ * descriptor contains the RNDIS interface descriptor. */
+#if CONFIG_TUSBD_NET_CDC_ECM && CONFIG_TUSBD_NET_RNDIS
+
+#define TUSBD_DESC_ALT_NET_LEN    TUD_RNDIS_DESC_LEN
+
+#define TUSBD_DESC_ALT_TOTAL_LEN (TUD_CONFIG_DESC_LEN + \
+                                 (CONFIG_TUSBD_CDC_NUMOF * TUD_CDC_DESC_LEN) + \
+                                 (CONFIG_TUSBD_DFU_NUMOF * TUD_DFU_DESC_LEN(CONFIG_TUSBD_DFU_ALT_NUMOF)) + \
+                                 (CONFIG_TUSBD_DFU_RT_NUMOF * TUD_DFU_RT_DESC_LEN) + \
+                                 (CONFIG_TUSBD_HID_NUMOF * TUD_HID_INOUT_DESC_LEN) + \
+                                 (CONFIG_TUSBD_MSC_NUMOF * TUD_MSC_DESC_LEN) + \
+                                 (CONFIG_TUSBD_VENDOR_NUMOF * TUD_VENDOR_DESC_LEN) + \
+                                 TUSBD_DESC_ALT_NET_LEN)
+
+#endif /* CONFIG_TUSBD_NET_CDC_ECM && CONFIG_TUSBD_NET_RNDIS */
 
 #endif /* !defined(CONFIG_TUSBD_USE_CUSTOM_DESC) */
 

@@ -28,6 +28,14 @@ extern "C" {
 #endif
 
 /**
+ * @brief USB OTG peripheral requirement for setting the device address
+ *
+ * The address in the USB device has to be directly after the SETUP
+ * stage on receipt of the `SET ADDRESS Request`.
+ */
+#define USBDEV_CPU_SET_ADDR_AFTER_STATUS    0
+
+/**
  * @brief USB OTG peripheral type.
  *
  * High speed peripheral is assumed to have DMA support available.
@@ -101,6 +109,11 @@ typedef struct {
                                       *  register in STM32 Reference Manual */
 #endif /* defined(MODULE_PERIPH_USBDEV_HS_UTMI) */
 #endif /* defined(MCU_STM32) || DOXYGEN */
+#if defined(MCU_GD32V)
+    uint32_t rcu_mask;              /**< bit in clock enable register */
+    uint8_t irqn;                   /**< IRQ channel */
+    uint8_t bus;                    /**< Peripheral bus */
+#endif
 } dwc2_usb_otg_fshs_config_t;
 
 #ifdef __cplusplus

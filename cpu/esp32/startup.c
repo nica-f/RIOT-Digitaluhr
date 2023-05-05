@@ -147,9 +147,24 @@ static NORETURN void IRAM system_startup_cpu0(void)
     puf_sram_init((uint8_t *)&_sheap, SEED_RAM_LEN);
 #endif
 
+#if IS_USED(MODULE_ESP_IDF_HEAP)
+    /* init heap */
+    heap_caps_init();
+    if (IS_ACTIVE(ENABLE_DEBUG)) {
+        ets_printf("Heap free: %u byte\n", get_free_heap_size());
+    }
+#endif
+
+    /* initialize system call tables of ESP32x rom and newlib */
+    syscalls_init();
+
+    /* systemwide UART initialization */
+    extern void uart_system_init (void);
+    uart_system_init();
+
     /* initialize stdio */
-    esp_rom_uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM);
-    stdio_init();
+    esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
+    early_init();
 
     RESET_REASON reset_reason = rtc_get_reset_reason(PRO_CPU_NUM);
 
@@ -199,14 +214,6 @@ static NORETURN void IRAM system_startup_cpu0(void)
 
     LOG_STARTUP("PRO cpu is up (single core mode, only PRO cpu is used)\n");
 
-#if IS_USED(MODULE_ESP_IDF_HEAP)
-    /* init heap */
-    heap_caps_init();
-    if (IS_ACTIVE(ENABLE_DEBUG)) {
-        ets_printf("Heap free: %u byte\n", get_free_heap_size());
-    }
-#endif
-
     /* init esp_timer implementation */
     esp_timer_early_init();
 
@@ -228,20 +235,13 @@ static NORETURN void IRAM system_init (void)
     /* initialize the ISR stack for usage measurements */
     thread_isr_stack_init();
 
-    /* initialize system call tables of ESP32x rom and newlib */
-    syscalls_init();
-
     /* install exception handlers */
     init_exceptions();
 
-    /* systemwide UART initialization */
-    extern void uart_system_init (void);
-    uart_system_init();
-
     /* set log levels for SDK library outputs */
     extern void esp_log_level_set(const char* tag, esp_log_level_t level);
-    esp_log_level_set("wifi", LOG_DEBUG);
-    esp_log_level_set("gpio", LOG_DEBUG);
+    esp_log_level_set("wifi", (esp_log_level_t)LOG_DEBUG);
+    esp_log_level_set("gpio", (esp_log_level_t)LOG_DEBUG);
 
     /* init watchdogs */
     system_wdt_init();
@@ -289,6 +289,11 @@ static NORETURN void IRAM system_init (void)
     print_board_config();
 #endif
 
+#if IS_USED(MODULE_PERIPH_FLASHPAGE)
+    extern void esp_flashpage_init(void);
+    esp_flashpage_init();
+#endif
+
 #if IS_USED(MODULE_MTD)
     /* init flash drive */
     extern void spi_flash_drive_init (void);
@@ -315,9 +320,9 @@ static NORETURN void IRAM system_init (void)
     /* starting RIOT */
 #if IS_USED(MODULE_ESP_LOG_STARTUP)
     LOG_STARTUP("Starting RIOT kernel on PRO cpu\n");
-    esp_rom_uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM);
+    esp_rom_uart_tx_wait_idle(CONFIG_ESP_CONSOLE_UART_NUM);
 #else
-    puts("");
+    ets_printf("\n");
 #endif
     kernel_init();
     UNREACHABLE();

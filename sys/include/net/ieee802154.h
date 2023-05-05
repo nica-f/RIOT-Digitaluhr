@@ -26,7 +26,7 @@
 
 #include "byteorder.h"
 #include "net/eui64.h"
-#include "kernel_defines.h"
+#include "modules.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -318,6 +318,13 @@ extern const uint8_t ieee802154_addr_bcast[IEEE802154_ADDR_BCAST_LEN];
  */
 #ifdef DOXYGEN
 #define CONFIG_IEEE802154_AUTO_ACK_DISABLE 0
+#endif
+
+/**
+ * @brief Request ACKs by default
+ */
+#ifndef CONFIG_IEEE802154_DEFAULT_ACK_REQ
+#define CONFIG_IEEE802154_DEFAULT_ACK_REQ          1
 #endif
 
 /**

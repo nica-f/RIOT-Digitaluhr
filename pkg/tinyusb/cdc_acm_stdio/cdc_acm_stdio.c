@@ -20,28 +20,18 @@
  * @}
  */
 
+#define USB_H_USER_IS_RIOT_INTERNAL
+
 #include <stdio.h>
 #include <sys/types.h>
 
 #include "tusb.h"
 #include "tinyusb.h"
 
-#if MODULE_VFS
-#include "vfs.h"
-#endif
-
-#ifdef MODULE_USB_BOARD_RESET
-#include "usb_board_reset_internal.h"
-#endif
-
 static mutex_t data_lock = MUTEX_INIT_LOCKED;
 
 void stdio_init(void)
 {
-    /* Initialize this side of the CDC ACM pipe */
-#if MODULE_VFS
-    vfs_bind_stdio();
-#endif
 }
 
 #if IS_USED(MODULE_STDIO_AVAILABLE)

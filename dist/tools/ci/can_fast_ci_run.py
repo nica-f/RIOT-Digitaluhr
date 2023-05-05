@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """
 Command line utility to check if only a subset of board / application combinations
 need to be build in the CI
@@ -73,6 +73,12 @@ class ChangeSet:
         while module != "":
             makefile = os.path.join(self._riotbase, module, "Makefile")
             if os.path.isfile(makefile) or module in EXCEPTION_MODULES:
+
+                # map all tests/unittests/* to just tests/unittests
+                # workaround for #18987
+                if module.startswith("tests/unittests/"):
+                    module = "tests/unittests"
+
                 if module in dest:
                     dest[module].append(file)
                 else:
