@@ -68,7 +68,8 @@ extern "C" {
  * that the USB peripheral is ready for use.
  */
 #ifndef CONFIG_USBUS_AUTO_ATTACH
-#if !IS_ACTIVE(KCONFIG_MODULE_USBUS)
+/* Check for Kconfig usage */
+#if !IS_ACTIVE(CONFIG_MODULE_USBUS)
 #define CONFIG_USBUS_AUTO_ATTACH            1
 #endif
 #endif
@@ -465,6 +466,7 @@ struct usbus {
     usbus_state_t state;                            /**< Current state                         */
     usbus_state_t pstate;                           /**< state to recover to from suspend      */
     uint8_t addr;                                   /**< Address of the USB peripheral         */
+    bool wakeup_enabled;                            /**< Remote wakeup device feature status   */
 #ifndef CONFIG_USB_SERIAL_STR
     /**
      * @brief Hex representation of the device serial number

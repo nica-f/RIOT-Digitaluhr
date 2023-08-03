@@ -292,6 +292,10 @@ static int _print_reply(gnrc_pktsnip_t *pkt, int corrupted, uint32_t triptime, v
     gnrc_pktsnip_t *ipv6 = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_IPV6);
     gnrc_pktsnip_t *icmpv6 = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_ICMPV6);
 
+    if (!ipv6 || !icmpv6) {
+        return -EINVAL;
+    }
+
     ipv6_hdr_t *ipv6_hdr = ipv6->data;
     icmpv6_echo_t *icmpv6_hdr = icmpv6->data;
 
@@ -344,7 +348,7 @@ static int _print_reply(gnrc_pktsnip_t *pkt, int corrupted, uint32_t triptime, v
     }
     /* check response for corruption */
     else if (corrupted >= 0) {
-        printf(" corrupted at offset %u", corrupted);
+        printf(" corrupted at offset %u", (unsigned)corrupted);
     }
     if (rssi != GNRC_NETIF_HDR_NO_RSSI) {
         printf(" rssi=%"PRId16" dBm", rssi);

@@ -106,7 +106,6 @@ static const char *_netopt_strmap[] = {
     [NETOPT_LORAWAN_DR]            = "NETOPT_LORAWAN_DR",
     [NETOPT_LORAWAN_ADR]           = "NETOPT_LORAWAN_ADR",
     [NETOPT_LORAWAN_PUBLIC_NETWORK]= "NETOPT_LORAWAN_PUBLIC_NETWORK",
-    [NETOPT_LORAWAN_TX_PORT]       = "NETOPT_LORAWAN_TX_PORT",
     [NETOPT_LORAWAN_RX2_DR]        = "NETOPT_LORAWAN_RX2_DR",
     [NETOPT_LORAWAN_RX2_FREQ]      = "NETOPT_LORAWAN_RX2_FREQ",
     [NETOPT_LORAWAN_MAX_RX_ERROR]  = "NETOPT_LORAWAN_MAX_RX_ERROR",
@@ -133,6 +132,9 @@ static const char *_netopt_strmap[] = {
     [NETOPT_BATMON]                = "NETOPT_BATMON",
     [NETOPT_L2_GROUP]              = "NETOPT_L2_GROUP",
     [NETOPT_L2_GROUP_LEAVE]        = "NETOPT_L2_GROUP_LEAVE",
+    [NETOPT_PAN_COORD]             = "NETOPT_PAN_COORD",
+    [NETOPT_GTS_ALLOC]             = "NETOPT_GTS_ALLOC",
+    [NETOPT_GTS_TX]                = "NETOPT_GTS_TX",
     [NETOPT_NUMOF]                 = "NETOPT_NUMOF",
 };
 

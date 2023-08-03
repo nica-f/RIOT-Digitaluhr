@@ -134,7 +134,7 @@ void i2c_init(i2c_t dev)
     /* configure shared periphal speed */
     _setup_shared_peripheral(dev);
 
-    spi_twi_irq_register_i2c(bus(dev), i2c_isr_handler, (void *)(uintptr_t)dev);
+    shared_irq_register_i2c(bus(dev), i2c_isr_handler, (void *)(uintptr_t)dev);
 
     /* We expect that the device was being acquired before
      * the i2c_init_master() function is called, so it should be enabled when
@@ -251,6 +251,9 @@ int i2c_read_bytes(i2c_t dev, uint16_t addr, void *data, size_t len,
     if (!(flags & I2C_NOSTOP)) {
         bus(dev)->SHORTS = TWIM_SHORTS_LASTRX_STOP_Msk;
     }
+    else {
+        bus(dev)->SHORTS = 0;
+    }
     /* Start transmission */
     bus(dev)->TASKS_STARTRX = 1;
 
@@ -308,6 +311,9 @@ int i2c_write_bytes(i2c_t dev, uint16_t addr, const void *data, size_t len,
     bus(dev)->TXD.MAXCNT = (uint8_t)len;
     if (!(flags & I2C_NOSTOP)) {
         bus(dev)->SHORTS = TWIM_SHORTS_LASTTX_STOP_Msk;
+    }
+    else {
+        bus(dev)->SHORTS = 0;
     }
     bus(dev)->TASKS_STARTTX = 1;
 

@@ -27,15 +27,71 @@ config HAS_ARCH_ARM
     help
         Indicates that the current architecture is ARM.
 
-config HAS_ARDUINO
+config HAS_ARDUINO_ANALOG
     bool
     help
-        Indicates that Arduino pins compatibility is supported.
+        Indicates that Arduino analog pins mappings are provided.
+
+config HAS_ARDUINO_DAC
+    bool
+    help
+        Indicates that Arduino DAC pins mappings are provided.
+
+config HAS_ARDUINO_I2C
+    bool
+    help
+        Indicates that Arduino I²C bus mappings are provided.
+
+config HAS_ARDUINO_PINS
+    bool
+    help
+        Indicates that Arduino digital pins mappings are provided.
 
 config HAS_ARDUINO_PWM
     bool
     help
-        Indicates that Arduino PWM compatibility is supported.
+        Indicates that Arduino digital pin to PWM mappings are provided.
+
+config HAS_ARDUINO_SHIELD_ISP
+    bool
+    help
+        Indicates that the board is electrically and mechanically compatible
+        with shields that mate with the ISP header for SPI connectivity.
+
+config HAS_ARDUINO_SHIELD_MEGA
+    bool
+    # The Arduino Mega 2560 is backward compatible with Arduino UNO shields. So
+    # any board compatible with Mega shields will automatically be compatible
+    # with UNO shields.
+    select HAS_ARDUINO_SHIELD_UNO
+    help
+        Indicates that the board is mechanically and electrically compatible
+        with shields developed for the Arduino Mega 2560. (Note: Not including
+        the ISP header, that requires HAS_ARDUINO_SHIELD_ISP in addition.)
+
+config HAS_ARDUINO_SHIELD_NANO
+    bool
+    help
+        Indicates that the board is mechanically and electrically compatible
+        with shields developed for the Arduino Nano. (Note: Not including
+        the ISP header, that requires HAS_ARDUINO_SHIELD_ISP in addition.)
+
+config HAS_ARDUINO_SHIELD_UNO
+    bool
+    help
+        Indicates that the board is mechanically and electrically compatible
+        with shields developed for the Arduino Nano. (Note: Not including
+        the ISP header, that requires HAS_ARDUINO_SHIELD_ISP in addition.)
+
+config HAS_ARDUINO_SPI
+    bool
+    help
+        Indicates that Arduino SPI bus mappings are provided.
+
+config HAS_ARDUINO_UART
+    bool
+    help
+        Indicates that Arduino UART device mappings are provided.
 
 config HAS_BACKUP_RAM
     bool
@@ -191,9 +247,9 @@ config HAS_PERIPH_GPIO_IRQ
 config HAS_PERIPH_GPIO_FAST_READ
     bool
     help
-	Indicates that the GPIO peripheral supports a mode in which pin read
-	operations are faster, usually with a tradeoff against a different
-	property.
+        Indicates that the GPIO peripheral supports a mode in which pin read
+        operations are faster, usually with a tradeoff against a different
+        property.
 
 config HAS_PERIPH_GPIO_TAMPER_WAKE
     bool
@@ -277,10 +333,21 @@ config HAS_PERIPH_CLIC
     help
         Indicates that a RISC-V Core-local Interrupt Controller (CLIC) peripheral is present.
 
+config HAS_PERIPH_PIO
+    bool
+    help
+        Indicates that Programmable IO (PIO) is supported by the CPU
+
+
 config HAS_PERIPH_PLIC
     bool
     help
         Indicates that a RISC-V Platform-local Interrupt Controller (PLIC) peripheral is present.
+
+config HAS_PERIPH_PMP
+    bool
+    help
+        Indicates that a RISC-V physical memory protection (PMP) peripheral is present.
 
 config HAS_PERIPH_PM
     bool
@@ -458,6 +525,11 @@ config HAS_PICOLIBC
     bool
     help
         Indicates that the picolibc C library is available for the platform.
+
+config HAS_PIO_I2C
+    bool
+    help
+        Indicates that there is a PIO program to provide emulated I2C
 
 config HAS_NEWLIB
     bool

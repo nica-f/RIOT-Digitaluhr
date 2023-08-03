@@ -89,9 +89,11 @@ config CPU_CORE
     default "xtensa-lx7" if CPU_CORE_XTENSA_LX7
     default "rv32imc" if CPU_CORE_RV32IMC
 
+rsource "Kconfig.esp32x"
 rsource "Kconfig.esp32"
 rsource "Kconfig.esp32c3"
 rsource "Kconfig.esp32s3"
 rsource "Kconfig.esp32s2"
+rsource "stdio_usb_serial_jtag/Kconfig"
 
 source "$(RIOTCPU)/esp_common/Kconfig"

@@ -29,22 +29,20 @@ config BOARD_SIPEED_LONGAN_NANO
 
     select HAVE_MTD_SDCARD_DEFAULT
     select MODULE_FATFS_VFS if MODULE_VFS_DEFAULT
-    select MODULE_USBUS if TEST_KCONFIG && !PACKAGE_TINYUSB
-    select MODULE_USBUS_CDC_ACM if MODULE_USBUS
-    select MODULE_USB_BOARD_RESET if MODULE_USBUS_CDC_ACM || MODULE_TINYUSB_CLASS_CDC
+    select MODULE_USB_BOARD_RESET if KCONFIG_USB && TEST_KCONFIG
+
+config FORCE_USB_STDIO
+    default y
 
 menu "Sipeed Longan Nano Board Configuration"
 
     config SIPEED_LONGAN_NANO_WITH_TFT
         bool "Board with TFT display"
+        default y if MODULE_DISP_DEV
+        select HAVE_ST7735
         help
             Indicates that a Sipeed Longan Nano board with TFT display is used.
 
 endmenu
-
-choice STDIO_IMPLEMENTATION
-    default MODULE_STDIO_CDC_ACM if MODULE_USBUS
-    default MODULE_STDIO_TINYUSB_CDC_ACM if PACKAGE_TINYUSB
-endchoice
 
 source "$(RIOTBOARD)/common/gd32v/Kconfig"

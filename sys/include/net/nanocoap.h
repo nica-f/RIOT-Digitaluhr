@@ -10,7 +10,7 @@
  */
 
 /**
- * @defgroup    net_nanocoap Nanocoap small CoAP library
+ * @defgroup    net_nanocoap nanoCoAP small CoAP library
  * @ingroup     net
  * @brief       CoAP library optimized for minimal resource usage
  *
@@ -92,6 +92,7 @@
 #include "iolist.h"
 #include "macros/utils.h"
 #include "net/coap.h"
+#include "modules.h"
 #else
 #include "coap.h"
 #include <arpa/inet.h>
@@ -112,7 +113,7 @@ extern "C" {
 #endif
 
 /**
- * @name    Nanocoap specific CoAP method flags used in coap_handlers array
+ * @name    nanoCoAP specific CoAP method flags used in coap_handlers array
  * @anchor  nanocoap_method_flags
  * @{
  */
@@ -130,12 +131,12 @@ extern "C" {
 /** @} */
 
 /**
- * @brief   Nanocoap-specific value to indicate no format specified
+ * @brief   nanoCoAP-specific value to indicate no format specified
  */
 #define COAP_FORMAT_NONE        (UINT16_MAX)
 
 /**
- * @defgroup net_nanocoap_conf    Nanocoap compile configurations
+ * @defgroup net_nanocoap_conf    nanoCoAP compile configurations
  * @ingroup  net_nanocoap
  * @ingroup  config
  * @{
@@ -513,14 +514,36 @@ static inline unsigned coap_get_id(const coap_pkt_t *pkt)
 /**
  * @brief   Get a message's token length [in byte]
  *
+ * If the `nanocoap_token_ext` module is enabled, this will include
+ * the extended token length.
+ *
  * @param[in]   pkt   CoAP packet
  *
  * @returns     length of token in the given message (0-8 byte)
  */
 static inline unsigned coap_get_token_len(const coap_pkt_t *pkt)
 {
-    return (pkt->hdr->ver_t_tkl & 0xf);
+    uint8_t tkl = pkt->hdr->ver_t_tkl & 0xf;
+
+    if (!IS_USED(MODULE_NANOCOAP_TOKEN_EXT)) {
+        return tkl;
+    }
+
+    void *ext = pkt->hdr + 1;
+    switch (tkl) {
+    case 13:
+        return tkl + *(uint8_t *)ext;
+    case 14:
+        return tkl + 255 + byteorder_bebuftohs(ext);
+    case 15:
+        assert(0);
+        /* fall-through */
+    default:
+        return tkl;
+    }
 }
+
+static inline uint8_t *coap_hdr_data_ptr(const coap_hdr_t *hdr);
 
 /**
  * @brief   Get pointer to a message's token
@@ -531,7 +554,7 @@ static inline unsigned coap_get_token_len(const coap_pkt_t *pkt)
  */
 static inline void *coap_get_token(const coap_pkt_t *pkt)
 {
-    return (uint8_t*)pkt->hdr + sizeof(coap_hdr_t);
+    return coap_hdr_data_ptr(pkt->hdr);
 }
 
 /**
@@ -588,6 +611,35 @@ static inline unsigned coap_get_ver(const coap_pkt_t *pkt)
 }
 
 /**
+ * @brief   Get the size of the extended Token length field
+ *          (RFC 8974)
+ *
+ * @note    This requires the `nanocoap_token_ext` module to be enabled
+ *
+ * @param[in]   hdr   CoAP header
+ *
+ * @returns     number of bytes used for extended token length
+ */
+static inline uint8_t coap_hdr_tkl_ext_len(const coap_hdr_t *hdr)
+{
+    if (!IS_USED(MODULE_NANOCOAP_TOKEN_EXT)) {
+        return 0;
+    }
+
+    switch (hdr->ver_t_tkl & 0xf) {
+    case 13:
+        return 1;
+    case 14:
+        return 2;
+    case 15:
+        assert(0);
+        /* fall-through */
+    default:
+        return 0;
+    }
+}
+
+/**
  * @brief   Get the start of data after the header
  *
  * @param[in]   hdr   Header of CoAP packet in contiguous memory
@@ -596,7 +648,7 @@ static inline unsigned coap_get_ver(const coap_pkt_t *pkt)
  */
 static inline uint8_t *coap_hdr_data_ptr(const coap_hdr_t *hdr)
 {
-    return ((uint8_t *)hdr) + sizeof(coap_hdr_t);
+    return ((uint8_t *)hdr) + sizeof(coap_hdr_t) + coap_hdr_tkl_ext_len(hdr);
 }
 
 /**
@@ -655,6 +707,21 @@ static inline void coap_hdr_set_type(coap_hdr_t *hdr, unsigned type)
  *              NULL if option number was not found
  */
 uint8_t *coap_find_option(coap_pkt_t *pkt, unsigned opt_num);
+
+/**
+ * @brief   Get pointer to an option field, can be called in a loop
+ *          if there are multiple options with the same number
+ *
+ * @param[in]   pkt     packet to work on
+ * @param[in]   opt_num the option number to search for
+ * @param[out]  opt_pos opaque, must be set to `NULL` on first call
+ * @param[out]  opt_len size of the current option data
+ *
+ * @returns     pointer to the option data
+ *              NULL if option number was not found
+ */
+uint8_t *coap_iterate_option(coap_pkt_t *pkt, unsigned opt_num,
+                             uint8_t **opt_pos, int *opt_len);
 
 /**
  * @brief   Get content type from packet

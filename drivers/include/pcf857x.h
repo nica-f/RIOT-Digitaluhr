@@ -36,7 +36,7 @@
  * used pseudomodules. For example, to use a PCF8574A and a PCF8575 I/O
  * expander in one application, the make command would be:
  *
- *      USEMODULE="pcf8574a pcf8575" make -C tests/driver_pcf857x BOARD=...
+ *      USEMODULE="pcf8574a pcf8575" make -C tests/drivers/pcf857x BOARD=...
  *
  * At least one PCF857X I2C I/O expander variant has to be specified. The
  * driver module `pcf857x` is then enabled implicitly.
@@ -156,7 +156,7 @@
  * configuration parameter file or at the command line, for example:
  *
  *      CFLAGS="-DPCF857X_PARAM_INT_PIN=\(GPIO_PIN\(0,6\)\)" \
- *      USEMODULE="pcf8575 pcf857x_irq_medium" make -C tests/driver_pcf857x BOARD=...
+ *      USEMODULE="pcf8575 pcf857x_irq_medium" make -C tests/drivers/pcf857x BOARD=...
  *
  * <br>
  * @note If an output of the expander is connected to an input of the same
@@ -195,7 +195,7 @@
  * @note Module `saul_gpio` has to be added to the
  * project to enable SAUL capabilities of the PCF857X driver, e.g.:
  *
- *      USEMODULE="pcf8575 saul_gpio" make -C tests/saul BOARD=...
+ *      USEMODULE="pcf8575 saul_gpio" make -C tests/drivers/saul BOARD=...
  *
  * ## Using Multiple Devices
  *
@@ -205,7 +205,7 @@
  * used pseudomodules. For example, to use a PCF8574A and a PCF8575 I/O
  * expander in one application, the make command would be:
  *
- *      USEMODULE="pcf8574a pcf8575" make -C tests/driver_pcf857x BOARD=...
+ *      USEMODULE="pcf8574a pcf8575" make -C tests/drivers/pcf857x BOARD=...
  *
  * Furthermore, used devices have to be configured by defining the
  * configuration parameter set `pcf857x_params` of type #pcf857x_params_t.
@@ -272,15 +272,21 @@ extern "C"
  * of 0 to 7.
  * @{
  */
+#ifndef PCF8575_BASE_ADDR
 #define PCF8575_BASE_ADDR   (0x20)  /**< PCF8575 I2C slave base address.
                                          Addresses are then in range from
                                          0x20 to 0x27 */
+#endif
+#ifndef PCF8574_BASE_ADDR
 #define PCF8574_BASE_ADDR   (0x20)  /**< PCF8574 I2C slave base address.
                                          Addresses are then in range from
                                          0x20 to 0x27 */
+#endif
+#ifndef PCF8574A_BASE_ADDR
 #define PCF8574A_BASE_ADDR  (0x38)  /**< PCF8574A I2C slave base address.
                                          Addresses are then in range from
                                          0x38 to 0x3f */
+#endif
 /** @} */
 
 /**

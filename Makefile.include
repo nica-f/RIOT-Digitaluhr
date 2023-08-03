@@ -56,7 +56,7 @@ BUILD_DIR                       ?= $(RIOTBASE)/build
 APPDIR                          ?= $(CURDIR)
 BINDIRBASE                      ?= $(APPDIR)/bin
 BINDIR                          ?= $(BINDIRBASE)/$(BOARD)
-PKGDIRBASE                      ?= $(RIOTBASE)/build/pkg
+PKGDIRBASE                      ?= $(BUILD_DIR)/pkg
 DLCACHE                         ?= $(RIOTTOOLS)/dlcache/dlcache.sh
 DLCACHE_DIR                     ?= $(RIOTBASE)/.dlcache
 RIOT_VERSION_DUMMY_CODE         ?= RIOT_VERSION_NUM\(2042,5,23,0\)
@@ -624,7 +624,7 @@ include $(RIOTMAKE)/modules.inc.mk
 
 
 .PHONY: all link clean flash flash-only termdeps term doc debug debug-server reset objdump help info-modules
-.PHONY: print-size elffile binfile hexfile flashfile cosy
+.PHONY: print-size elffile lstfile binfile hexfile flashfile cosy
 .PHONY: ..in-docker-container
 
 # Targets that depend on FORCE will always be rebuilt. Contrary to a .PHONY
@@ -658,6 +658,7 @@ HEXFILE ?= $(ELFFILE:.elf=.hex)
 BINFILE ?= $(ELFFILE:.elf=.bin)
 HASHFILE ?= $(BINFILE)
 MAPFILE ?= $(ELFFILE:.elf=.map)
+LSTFILE ?= $(ELFFILE:.elf=.lst)
 
 ifneq (,$(filter suit,$(USEMODULE)))
   include $(RIOTMAKE)/suit.base.inc.mk
@@ -680,6 +681,7 @@ DEBUG_ELFFILE ?= $(ELFFILE)
 elffile: $(ELFFILE)
 hexfile: $(HEXFILE)
 binfile: $(BINFILE)
+lstfile: $(LSTFILE)
 # FLASHFILE is the file used by the flasher
 # Usually set to $(ELFFILE), $(HEXFILE) or $(BINFILE) in the board/flasher
 # or application specific files
@@ -707,6 +709,7 @@ BUILDDEPS += $(RIOTBUILD_CONFIG_HEADER_C)
 BUILDDEPS += pkg-prepare
 BUILDDEPS += $(APPDEPS)
 BUILDDEPS += $(MODULE_LIST_DIR)
+BUILDDEPS += $(BUILD_DIR)/CACHEDIR.TAG
 
 # Build dependencies depend on clean (if a make goal), as clean may wipe them.
 # Without them depending on clean parallel builds occasionally fail due to
@@ -726,6 +729,15 @@ ifeq ($(BUILDOSXNATIVE),1)
 else
   _LINK = $(if $(CPPMIX),$(LINKXX),$(LINK)) $$(find $(BASELIBS:%.module=$(BINDIR)/%/) -name "*.o" 2> /dev/null | sort) $(ARCHIVES_GROUP) $(LINKFLAGS) $(LINKFLAGPREFIX)-Map=$(BINDIR)/$(APPLICATION).map
 endif # BUILDOSXNATIVE
+
+COMPILE_COMMANDS_PATH ?= $(RIOTBASE)/compile_commands.json
+COMPILE_COMMANDS_FLAGS ?= --clangd
+.PHONY: compile-commands
+compile-commands: $(BUILDDEPS)
+	$(Q)DIRS="$(DIRS)" APPLICATION_BLOBS="$(BLOBS)" \
+	  "$(MAKE)" -C $(APPDIR) -f $(RIOTMAKE)/application.inc.mk compile-commands
+	$(Q)$(RIOTTOOLS)/compile_commands/compile_commands.py $(COMPILE_COMMANDS_FLAGS) $(BINDIR) \
+	  > $(COMPILE_COMMANDS_PATH)
 
 ifeq ($(BUILD_IN_DOCKER),1)
 link: ..in-docker-container
@@ -750,15 +762,6 @@ $(APPLICATION_MODULE).module: pkg-build $(BUILDDEPS)
 	  "$(MAKE)" -C $(APPDIR) -f $(RIOTMAKE)/application.inc.mk
 $(APPLICATION_MODULE).module: FORCE
 
-COMPILE_COMMANDS_PATH ?= $(RIOTBASE)/compile_commands.json
-COMPILE_COMMANDS_FLAGS ?= --clangd
-.PHONY: compile-commands
-compile-commands: $(BUILDDEPS)
-	$(Q)DIRS="$(DIRS)" APPLICATION_BLOBS="$(BLOBS)" \
-	  "$(MAKE)" -C $(APPDIR) -f $(RIOTMAKE)/application.inc.mk compile-commands
-	$(Q)$(RIOTTOOLS)/compile_commands/compile_commands.py $(COMPILE_COMMANDS_FLAGS) $(BINDIR) \
-	  > $(COMPILE_COMMANDS_PATH)
-
 # Other modules are built by application.inc.mk and packages building
 _SUBMAKE_LIBS = $(filter-out $(APPLICATION_MODULE).module $(APPDEPS), $(BASELIBS) $(ARCHIVES))
 $(_SUBMAKE_LIBS): $(APPLICATION_MODULE).module pkg-build
@@ -767,11 +770,21 @@ $(_SUBMAKE_LIBS): $(APPLICATION_MODULE).module pkg-build
 print-size: $(ELFFILE)
 	$(Q)$(SIZE) $(SIZEFLAGS) $<
 
+$(BUILD_DIR)/CACHEDIR.TAG:
+	$(Q)mkdir -p "$(BUILD_DIR)"
+	$(Q)echo "Signature: 8a477f597d28d172789f06886806bc55" > "$@"
+	$(Q)echo "# This folder contains RIOT's build cache" >> "$@"
+
 %.hex: %.elf
 	$(Q)$(OBJCOPY) $(OFLAGS) -Oihex $< $@
 
 %.bin: %.elf
 	$(Q)$(OBJCOPY) $(OFLAGS) -Obinary $< $@
+
+%.lst: %.elf
+	$(Q)$(OBJDUMP) --disassemble-all --file-headers --file-offsets \
+  --section-headers --line-numbers --private-headers --source --wide \
+  --disassemble-zeroes $< > $@
 
 endif # BUILD_IN_DOCKER
 
@@ -888,6 +901,10 @@ doc:
 debug: $(DEBUGDEPS)
 	$(call check_cmd,$(DEBUGGER),Debug program)
 	$(DEBUGGER) $(DEBUGGER_FLAGS)
+
+debug-client:
+	$(call check_cmd,$(DEBUGCLIENT),Debug client program)
+	$(DEBUGCLIENT) $(DEBUGCLIENT_FLAGS)
 
 debug-server:
 	$(call check_cmd,$(DEBUGSERVER),Debug server program)

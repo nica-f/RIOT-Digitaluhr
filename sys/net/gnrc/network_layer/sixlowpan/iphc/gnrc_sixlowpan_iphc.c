@@ -113,6 +113,8 @@
 #define NHC_IPV6_EXT_EID_MOB        (0x04 << 1)
 #define NHC_IPV6_EXT_EID_IPV6       (0x07 << 1)
 
+#define SIXLOWPAN_IPHC_PREFIX_LEN   (64)    /**< minimum prefix length for IPHC */
+
 /* currently only used with forwarding output, remove guard if more debug info
  * is added */
 #ifdef MODULE_GNRC_SIXLOWPAN_FRAG_VRB
@@ -545,6 +547,11 @@ static size_t _iphc_nhc_ipv6_decode(gnrc_pktsnip_t *sixlo, size_t offset,
             ipv6_hdr_t *ipv6_hdr;
             uint16_t payload_len;
             size_t tmp;
+
+            if (netif == NULL) {
+                DEBUG("6lo iphc: unable to find NETIF snip\n");
+                return 0;
+            }
 
             offset++;   /* move over NHC header */
             /* realloc size for uncompressed snip, if too small */
@@ -1072,11 +1079,17 @@ static size_t _iphc_ipv6_encode(gnrc_pktsnip_t *pkt,
                                 uint8_t *iphc_hdr)
 {
     gnrc_sixlowpan_ctx_t *src_ctx = NULL, *dst_ctx = NULL;
-    ipv6_hdr_t *ipv6_hdr = pkt->next->data;
+    ipv6_hdr_t *ipv6_hdr;
     bool addr_comp = false;
     uint16_t inline_pos = SIXLOWPAN_IPHC_HDR_LEN;
 
     assert(iface != NULL);
+
+    if (pkt->next == NULL) {
+        DEBUG("6lo iphc: packet missing header\n");
+        return 0;
+    }
+    ipv6_hdr = pkt->next->data;
 
     /* set initial dispatch value*/
     iphc_hdr[IPHC1_IDX] = SIXLOWPAN_IPHC1_DISP;
@@ -1090,6 +1103,11 @@ static size_t _iphc_ipv6_encode(gnrc_pktsnip_t *pkt,
         if (src_ctx && !(src_ctx->flags_id & GNRC_SIXLOWPAN_CTX_FLAGS_COMP)) {
             src_ctx = NULL;
         }
+        /* prefix bits not covered by context information must be zero */
+        if (src_ctx &&
+            ipv6_addr_match_prefix(&src_ctx->prefix, &ipv6_hdr->src) < SIXLOWPAN_IPHC_PREFIX_LEN) {
+            src_ctx = NULL;
+        }
     }
 
     if (!ipv6_addr_is_multicast(&ipv6_hdr->dst)) {
@@ -1097,6 +1115,11 @@ static size_t _iphc_ipv6_encode(gnrc_pktsnip_t *pkt,
         /* do not use destination context for compression if */
         /* GNRC_SIXLOWPAN_CTX_FLAGS_COMP is not set */
         if (dst_ctx && !(dst_ctx->flags_id & GNRC_SIXLOWPAN_CTX_FLAGS_COMP)) {
+            dst_ctx = NULL;
+        }
+        /* prefix bits not covered by context information must be zero */
+        if (dst_ctx &&
+            ipv6_addr_match_prefix(&dst_ctx->prefix, &ipv6_hdr->dst) < SIXLOWPAN_IPHC_PREFIX_LEN) {
             dst_ctx = NULL;
         }
     }
@@ -1730,6 +1753,14 @@ void gnrc_sixlowpan_iphc_send(gnrc_pktsnip_t *pkt, void *ctx, unsigned page)
         gnrc_sixlowpan_multiplex_by_size(tmp, orig_datagram_size, netif, page);
     }
     else {
+        if (IS_USED(MODULE_GNRC_SIXLOWPAN_FRAG_MINFWD)) {
+            gnrc_sixlowpan_frag_fb_t *fb = ctx;
+
+            if (fb->pkt == pkt) {
+                /* free provided fragmentation buffer */
+                fb->pkt = NULL;
+            }
+        }
         gnrc_pktbuf_release(pkt);
     }
 }
