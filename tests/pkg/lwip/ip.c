@@ -155,9 +155,8 @@ static int ip_send(char *addr_str, char *port_str, char *data, unsigned int num,
             puts("could not send");
         }
         else {
-            printf("Success: send %u byte over %s to %s (next header: %u)\n",
-                   (unsigned)data_len,
-                   (dst.family == AF_INET6) ? "IPv6" : "IPv4",
+            printf("Success: send %" PRIuSIZE " byte over %s to %s (next header: %u)\n",
+                   data_len, (dst.family == AF_INET6) ? "IPv6" : "IPv4",
                    addr_str, protocol);
         }
         ztimer_sleep(ZTIMER_USEC, delay);
@@ -168,7 +167,7 @@ static int ip_send(char *addr_str, char *port_str, char *data, unsigned int num,
 static int ip_start_server(char *port_str)
 {
     if (thread_create(server_stack, sizeof(server_stack), THREAD_PRIORITY_MAIN - 1,
-                      THREAD_CREATE_STACKTEST, _server_thread, port_str,
+                      0, _server_thread, port_str,
                       "IP server") <= KERNEL_PID_UNDEF) {
         return 1;
     }

@@ -30,6 +30,7 @@
 #include "net/sock/udp.h"
 #include "net/sock/util.h"
 #include "random.h"
+#include "string_utils.h"
 #include "uri_parser.h"
 #include "ut_process.h"
 
@@ -316,13 +317,9 @@ ssize_t gcoap_dns_server_proxy_get(char *proxy, size_t proxy_len)
     ssize_t res = 0;
     mutex_lock(&_client_mutex);
     if (_dns_server_uri_isset()) {
-        res = strlen(_uri);
-        if (((size_t)res + 1) > proxy_len) {
-            /* account for trailing \0 */
+        res = strscpy(proxy, _proxy, proxy_len);
+        if (res == -E2BIG) {
             res = -ENOBUFS;
-        }
-        else {
-            strcpy(proxy, _proxy);
         }
     }
     mutex_unlock(&_client_mutex);
@@ -549,7 +546,7 @@ static int _do_block(coap_pkt_t *pdu, const sock_udp_ep_t *remote,
     coap_block1_finish(&slicer);
 
     if ((len = _send(pdu->hdr, len, remote, slicer.start == 0, context, tl_type)) <= 0) {
-        DEBUG("gcoap_dns: msg send failed: %d\n", (int)len);
+        DEBUG("gcoap_dns: msg send failed: %" PRIdSIZE "\n", len);
         return len;
     }
     return len;
@@ -679,7 +676,7 @@ static void _resp_handler(const gcoap_request_memo_t *memo, coap_pkt_t *pdu,
 
         if ((block.offset + pdu->payload_len) > CONFIG_DNS_MSG_LEN) {
             DEBUG("gcoap_dns: No buffer space for block-wise transfer "
-                  "(%lu + %u) > %u\n", (long unsigned)block.offset,
+                  "(%" PRIuSIZE " + %u) > %u\n", block.offset,
                   pdu->payload_len, CONFIG_DNS_MSG_LEN);
             context->res = -ENOBUFS;
             goto unlock;
@@ -765,6 +762,6 @@ static ssize_t _send(const void *buf, size_t len, const sock_udp_ep_t *remote,
     if (lock_resp_wait) {
         mutex_lock(&context->resp_wait);
     }
-    return gcoap_req_send_tl(buf, len, remote, _resp_handler, context, tl_type);
+    return gcoap_req_send(buf, len, remote, NULL, _resp_handler, context, tl_type);
 }
 /** @} */

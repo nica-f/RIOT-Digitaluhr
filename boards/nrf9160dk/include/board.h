@@ -78,13 +78,21 @@ extern "C" {
  * @{
  */
 #define BTN0_PIN            GPIO_PIN(0, 6)  /**< BTN0 pin definition */
-#define BTN0_MODE           GPIO_IN         /**< BTN0 default mode */
+#define BTN0_MODE           GPIO_IN_PU      /**< BTN0 default mode */
 #define BTN1_PIN            GPIO_PIN(0, 7)  /**< BTN1 pin definition */
-#define BTN1_MODE           GPIO_IN         /**< BTN1 default mode */
+#define BTN1_MODE           GPIO_IN_PU      /**< BTN1 default mode */
 #define BTN2_PIN            GPIO_PIN(0, 8)  /**< BTN2 pin definition */
-#define BTN2_MODE           GPIO_IN         /**< BTN2 default mode */
+#define BTN2_MODE           GPIO_IN_PU      /**< BTN2 default mode */
 #define BTN3_PIN            GPIO_PIN(0, 9)  /**< BTN3 pin definition */
-#define BTN3_MODE           GPIO_IN         /**< BTN3 default mode */
+#define BTN3_MODE           GPIO_IN_PU      /**< BTN3 default mode */
+/** @} */
+
+/**
+ * @name    WS281x RGB LED configuration
+ * @{
+ */
+#define WS281X_TIMER_DEV    TIMER_DEV(1)            /**< Timer device */
+#define WS281X_TIMER_MAX_VALUE TIMER_1_MAX_VALUE    /**< Timer max value */
 /** @} */
 
 #ifdef __cplusplus

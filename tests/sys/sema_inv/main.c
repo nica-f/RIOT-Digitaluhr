@@ -76,16 +76,16 @@ static void test_counter_mode(void)
     sema_inv_init(&sync, 3);
 
     thread_create(t1_stack, sizeof(t1_stack), THREAD_PRIORITY_MAIN - 1,
-                  THREAD_CREATE_STACKTEST, thread_count, &ctx[0], "nr1");
+                  0, thread_count, &ctx[0], "nr1");
     thread_create(t2_stack, sizeof(t2_stack), THREAD_PRIORITY_MAIN + 1,
-                  THREAD_CREATE_STACKTEST, thread_count, &ctx[1], "nr2");
+                  0, thread_count, &ctx[1], "nr2");
     thread_create(t3_stack, sizeof(t3_stack), THREAD_PRIORITY_MAIN + 1,
-                  THREAD_CREATE_STACKTEST, thread_count, &ctx[2], "nr3");
+                  0, thread_count, &ctx[2], "nr3");
 
     sema_inv_wait(&sync);
     puts("thread synced");
 
-    /* wait for all threads to terminate, we are going to re-use the stack */
+    /* wait for all threads to terminate, we are going to reuse the stack */
     ztimer_sleep(ZTIMER_MSEC, 50);
 }
 
@@ -103,16 +103,16 @@ static void test_mask_mode(void)
     sema_inv_init(&sync, 0xE);
 
     thread_create(t1_stack, sizeof(t1_stack), THREAD_PRIORITY_MAIN - 1,
-                  THREAD_CREATE_STACKTEST, thread_bit, &ctx[0], "nr1");
+                  0, thread_bit, &ctx[0], "nr1");
     thread_create(t2_stack, sizeof(t2_stack), THREAD_PRIORITY_MAIN + 1,
-                  THREAD_CREATE_STACKTEST, thread_bit, &ctx[1], "nr2");
+                  0, thread_bit, &ctx[1], "nr2");
     thread_create(t3_stack, sizeof(t3_stack), THREAD_PRIORITY_MAIN + 1,
-                  THREAD_CREATE_STACKTEST, thread_bit, &ctx[2], "nr3");
+                  0, thread_bit, &ctx[2], "nr3");
 
     sema_inv_wait(&sync);
     puts("thread synced");
 
-    /* wait for all threads to terminate, we are going to re-use the stack */
+    /* wait for all threads to terminate, we are going to reuse the stack */
     ztimer_sleep(ZTIMER_MSEC, 50);
 }
 

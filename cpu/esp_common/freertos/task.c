@@ -33,7 +33,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#ifdef MCU_ESP8266
+#ifdef CPU_ESP8266
 #include "rom/ets_sys.h"
 #endif
 
@@ -82,7 +82,7 @@ BaseType_t xTaskCreatePinnedToCore(TaskFunction_t pvTaskCode,
                                      usStackDepth + sizeof(thread_t),
                                      uxPriority,
                                      THREAD_CREATE_WOUT_YIELD |
-                                     THREAD_CREATE_STACKTEST,
+                                     0,
                                      (void *)pvTaskCode,
                                      pvParameters, pcName);
     DEBUG("pid=%d\n", pid);
@@ -197,7 +197,7 @@ UBaseType_t uxTaskGetStackHighWaterMark(TaskHandle_t xTask)
     thread_t *thread = thread_get((xTask == NULL) ? (uint32_t)thread_getpid()
                                                   : (uint32_t)xTask);
     assert(thread != NULL);
-    return thread_measure_stack_free(thread->stack_start);
+    return thread_measure_stack_free(thread);
 }
 
 void *pvTaskGetThreadLocalStoragePointer(TaskHandle_t xTaskToQuery,
@@ -231,12 +231,12 @@ TickType_t xTaskGetTickCount (void)
 
 void vTaskEnterCritical( portMUX_TYPE *mux )
 {
-#ifdef MCU_ESP8266
+#ifdef CPU_ESP8266
     /* we have to return on NMI */
     if (NMIIrqIsOn) {
         return;
     }
-#endif /* MCU_ESP8266 */
+#endif /* CPU_ESP8266 */
 
     /* disable interrupts */
     uint32_t state = irq_disable();
@@ -268,12 +268,12 @@ void vTaskEnterCritical( portMUX_TYPE *mux )
 
 void vTaskExitCritical( portMUX_TYPE *mux )
 {
-#ifdef MCU_ESP8266
+#ifdef CPU_ESP8266
     /* we have to return on NMI */
     if (NMIIrqIsOn) {
         return;
     }
-#endif /* MCU_ESP8266 */
+#endif /* CPU_ESP8266 */
 
     /* determine calling thread pid (can't fail) */
     kernel_pid_t my_pid = thread_getpid();

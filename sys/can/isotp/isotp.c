@@ -497,7 +497,8 @@ static void _isotp_fill_dataframe(struct isotp *isotp, struct can_frame *frame, 
     frame->can_id = isotp->opt.tx_id;
     frame->can_dlc = num_bytes + pci_len;
 
-    DEBUG("_isotp_fill_dataframe: num_bytes=%d, pci_len=%d\n", (unsigned)num_bytes, (unsigned)pci_len);
+    DEBUG("_isotp_fill_dataframe: num_bytes=%" PRIuSIZE ", pci_len=%" PRIuSIZE "\n",
+          num_bytes, pci_len);
 
     if (num_bytes < space) {
         if (isotp->opt.flags & CAN_ISOTP_TX_PADDING) {
@@ -731,7 +732,7 @@ kernel_pid_t isotp_init(char *stack, int stacksize, char priority, const char *n
     DEBUG("isotp_init\n");
 
     /* create new can device thread */
-    res = thread_create(stack, stacksize, priority, THREAD_CREATE_STACKTEST,
+    res = thread_create(stack, stacksize, priority, 0,
                          _isotp_thread, NULL, name);
     if (res <= 0) {
         return -EINVAL;

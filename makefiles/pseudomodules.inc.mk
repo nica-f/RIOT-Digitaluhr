@@ -35,9 +35,20 @@ PSEUDOMODULES += board_software_reset
 
 PSEUDOMODULES += arduino_pwm
 PSEUDOMODULES += arduino_serial_stdio
+## @defgroup pseudomodule_arm_stack_limit arm_stack_limit
+## @{
+## @brief Set MSP/PSP stack lower limit
+##
+## Use PSPLIM and MSPLIM ARM registers to set the lower limit of a stack
+## This is a protection mechanism to catch stack overflow early before it
+## can corrupt adjacent memory. Only available on ARMv8-M architecture.
+PSEUDOMODULES += cortexm_stack_limit
+## @}
+
 PSEUDOMODULES += can_mbox
 PSEUDOMODULES += can_pm
 PSEUDOMODULES += can_raw
+PSEUDOMODULES += can_rx_mailbox
 PSEUDOMODULES += ccn-lite-utils
 PSEUDOMODULES += cc2538_rf_obs_sig
 PSEUDOMODULES += conn_can_isotp_multi
@@ -69,10 +80,8 @@ PSEUDOMODULES += evtimer_mbox
 PSEUDOMODULES += fatfs_vfs_format
 PSEUDOMODULES += fmt_%
 PSEUDOMODULES += gcoap_forward_proxy
+PSEUDOMODULES += gcoap_forward_proxy_thread
 PSEUDOMODULES += gcoap_fileserver
-PSEUDOMODULES += gcoap_fileserver_callback
-PSEUDOMODULES += gcoap_fileserver_delete
-PSEUDOMODULES += gcoap_fileserver_put
 PSEUDOMODULES += gcoap_dtls
 ## @addtogroup net_gcoap_dns
 ## @{
@@ -99,6 +108,7 @@ PSEUDOMODULES += gnrc_dhcpv6_client_simple_pd
 ## @}
 PSEUDOMODULES += gnrc_ipv6_auto_subnets_auto_init
 PSEUDOMODULES += gnrc_ipv6_auto_subnets_simple
+PSEUDOMODULES += gnrc_ipv6_classic
 PSEUDOMODULES += gnrc_ipv6_default
 PSEUDOMODULES += gnrc_ipv6_ext_frag_stats
 PSEUDOMODULES += gnrc_ipv6_router
@@ -111,37 +121,15 @@ PSEUDOMODULES += gnrc_ipv6_nib_rio
 PSEUDOMODULES += gnrc_ipv6_nib_router
 PSEUDOMODULES += gnrc_ipv6_nib_rtr_adv_pio_cb
 PSEUDOMODULES += gnrc_lorawan_1_1
-## @defgroup net_gnrc_netdev_default  gnrc_netdev_default
-## @ingroup net_gnrc_netif
-## @{
-## @deprecated  Use module `netdev_default` with `gnrc` or a `gnrc` submodule
-##              instead; will be removed after 2022.07 release.
-PSEUDOMODULES += gnrc_netdev_default
-## @}
 PSEUDOMODULES += gnrc_neterr
 PSEUDOMODULES += gnrc_netapi_callbacks
 PSEUDOMODULES += gnrc_netapi_mbox
 PSEUDOMODULES += gnrc_netif_bus
 PSEUDOMODULES += gnrc_netif_timestamp
-## @defgroup net_gnrc_pktbuf_cmd  gnrc_pktbuf_cmd
-## @ingroup net_gnrc_pktbuf
-## @{
-## @deprecated  Use module `shell_cmd_gnrc_pktbuf` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += gnrc_pktbuf_cmd
-## @}
 PSEUDOMODULES += gnrc_netif_6lo
 PSEUDOMODULES += gnrc_netif_ipv6
 PSEUDOMODULES += gnrc_netif_mac
 PSEUDOMODULES += gnrc_netif_single
-## @defgroup net_gnrc_netif_cmd_lora  gnrc_netif_cmd_lora
-## @ingroup sys_shell_commands
-## @ingroup net_gnrc_netif
-## @{
-## @deprecated  Use module `shell_cmd_gnrc_netif_lorawan` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += gnrc_netif_cmd_lora
-## @}
 PSEUDOMODULES += gnrc_netif_dedup
 
 
@@ -180,6 +168,10 @@ PSEUDOMODULES += gnrc_nettype_ipv6_ext
 
 ## @defgroup 	net_gnrc_nettype_lorawan    gnrc_nettype_lorawan
 ## Enables @ref GNRC_NETTYPE_LORAWAN
+##
+## @deprecated  LoRaWAN payloads do not have a special type anymore and just use
+##              @ref GNRC_NETTYPE_UNDEF. There is no module needed for that.
+##              This module will be removed after 2024.10 release.
 ## @{
 PSEUDOMODULES += gnrc_nettype_lorawan
 ## @}
@@ -258,30 +250,9 @@ PSEUDOMODULES += gnrc_sixlowpan_frag_sfr_congure_sfr
 PSEUDOMODULES += gnrc_sixlowpan_iphc_nhc
 PSEUDOMODULES += gnrc_sixlowpan_nd_border_router
 PSEUDOMODULES += gnrc_sixlowpan_router_default
-## @defgroup net_gnrc_udp_cmd  gnrc_udp_cmd
-## @ingroup net_gnrc_udp
-## @{
-## @deprecated  Use module `shell_cmd_gnrc_udp` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += gnrc_udp_cmd
-## @}
 PSEUDOMODULES += gnrc_sock_async
 PSEUDOMODULES += gnrc_sock_check_reuse
 PSEUDOMODULES += gnrc_txtsnd
-## @defgroup pseudomodule_heap_cmd heap_cmd
-## @ingroup sys_shell_commands
-## @{
-## @deprecated  Use module `shell_cmd_heap` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += heap_cmd
-## @}
-## @defgroup pseudomodule_i2c_scan i2c_scan
-## @ingroup sys_shell_commands
-## @{
-## @deprecated  Use module `shell_cmd_i2c_scan` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += i2c_scan
-## @}
 PSEUDOMODULES += ieee802154_security
 PSEUDOMODULES += ieee802154_submac
 PSEUDOMODULES += ipv4
@@ -304,7 +275,11 @@ PSEUDOMODULES += libc_gettimeofday
 ## @defgroup pseudomodule_malloc_tracing malloc_tracing
 ## @brief Debug dynamic memory management by hooking in a print into each call
 ##        of malloc(), calloc(), realloc() and free
+## @{
+## @deprecated  Use module `malloc_monitor` with verbous configuration instead;
+##              will be removed after 2024.07 release.
 PSEUDOMODULES += malloc_tracing
+## @}
 
 ## @defgroup pseudomodule_mpu_stack_guard mpu_stack_guard
 ## @brief MPU based stack guard
@@ -331,15 +306,11 @@ PSEUDOMODULES += mpu_noexec_ram
 PSEUDOMODULES += pmp_noexec_ram
 ## @}
 
-## @defgroup pseudomodule_md5sum md5sum
-## @ingroup sys_shell_commands
-## @{
-## @deprecated  Use module `shell_cmd_md5sum` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += md5sum
-## @}
 PSEUDOMODULES += mtd_write_page
 PSEUDOMODULES += nanocoap_%
+PSEUDOMODULES += nanocoap_fileserver_callback
+PSEUDOMODULES += nanocoap_fileserver_delete
+PSEUDOMODULES += nanocoap_fileserver_put
 PSEUDOMODULES += netdev_default
 PSEUDOMODULES += netdev_ieee802154_%
 PSEUDOMODULES += netdev_ieee802154_rx_timestamp
@@ -371,13 +342,6 @@ PSEUDOMODULES += nrfx
 PSEUDOMODULES += newlib
 PSEUDOMODULES += newlib_gnu_source
 PSEUDOMODULES += newlib_nano
-## @defgroup pseudomodule_nice nice
-## @ingroup sys_shell_commands
-## @{
-## @deprecated  Use module `shell_cmd_nice` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += nice
-## @}
 PSEUDOMODULES += nrf24l01p_ng_diagnostics
 PSEUDOMODULES += opendsme
 PSEUDOMODULES += openthread
@@ -388,14 +352,24 @@ PSEUDOMODULES += posix_headers
 PSEUDOMODULES += printf_float
 PSEUDOMODULES += prng
 PSEUDOMODULES += prng_%
+PSEUDOMODULES += psa_riot_cipher_aes_common
+PSEUDOMODULES += psa_riot_cipher_aes_128_ecb
+PSEUDOMODULES += psa_riot_cipher_aes_128_cbc
+PSEUDOMODULES += psa_riot_cipher_aes_192_cbc
+PSEUDOMODULES += psa_riot_cipher_aes_256_cbc
+PSEUDOMODULES += psa_riot_hashes_md5
+PSEUDOMODULES += psa_riot_hashes_sha_1
+PSEUDOMODULES += psa_riot_hashes_sha_224
+PSEUDOMODULES += psa_riot_hashes_sha_256
+PSEUDOMODULES += psa_riot_hashes_sha_384
+PSEUDOMODULES += psa_riot_hashes_sha_512
+PSEUDOMODULES += psa_riot_hashes_sha3_256
+PSEUDOMODULES += psa_riot_hashes_sha3_384
+PSEUDOMODULES += psa_riot_hashes_sha3_512
+PSEUDOMODULES += psa_riot_hashes_sha_512_224
+PSEUDOMODULES += psa_riot_hashes_sha_512_256
+PSEUDOMODULES += psa_riot_hashes_hmac_sha256
 PSEUDOMODULES += fortuna_reseed
-## @defgroup pseudomodule_random_cmd random_cmd
-## @ingroup sys_shell_commands
-## @{
-## @deprecated  Use module `shell_cmd_random` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += random_cmd
-## @}
 PSEUDOMODULES += riotboot_%
 PSEUDOMODULES += rtt_cmd
 PSEUDOMODULES += saul_adc
@@ -432,20 +406,7 @@ PSEUDOMODULES += servo_timer
 ## @{
 PSEUDOMODULES += servo_saul
 ## @}
-## @defgroup pseudomodule_sha1sum sha1sum
-## @ingroup sys_shell_commands
-## @{
-## @deprecated  Use module `shell_cmd_sha1sum` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += sha1sum
-## @}
-## @defgroup pseudomodule_sha256sum sha256sum
-## @ingroup sys_shell_commands
-## @{
-## @deprecated  Use module `shell_cmd_sha256sum` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += sha256sum
-## @}
+
 PSEUDOMODULES += shell_cmd_app_metadata
 PSEUDOMODULES += shell_cmd_at30tse75x
 PSEUDOMODULES += shell_cmd_benchmark_udp
@@ -469,9 +430,11 @@ PSEUDOMODULES += shell_cmd_gnrc_pktbuf
 PSEUDOMODULES += shell_cmd_gnrc_rpl
 PSEUDOMODULES += shell_cmd_gnrc_sixlowpan_ctx
 PSEUDOMODULES += shell_cmd_gnrc_sixlowpan_frag_stats
+PSEUDOMODULES += shell_cmd_gnrc_txtsnd
 PSEUDOMODULES += shell_cmd_gnrc_udp
 PSEUDOMODULES += shell_cmd_heap
 PSEUDOMODULES += shell_cmd_i2c_scan
+PSEUDOMODULES += shell_cmd_iw
 PSEUDOMODULES += shell_cmd_lwip_netif
 PSEUDOMODULES += shell_cmd_mci
 PSEUDOMODULES += shell_cmd_md5sum
@@ -495,14 +458,9 @@ PSEUDOMODULES += shell_cmd_sht1x
 PSEUDOMODULES += shell_cmd_sntp
 PSEUDOMODULES += shell_cmd_suit
 PSEUDOMODULES += shell_cmd_sys
+PSEUDOMODULES += shell_cmd_udptty
 PSEUDOMODULES += shell_cmd_vfs
 PSEUDOMODULES += shell_cmds_default
-## @addtogroup sys_shell_commands
-## @{
-## @deprecated  Use module `shell_cmds_default` instead;
-##              will be removed after 2023.07 release.
-PSEUDOMODULES += shell_commands
-## @}
 PSEUDOMODULES += shell_hooks
 PSEUDOMODULES += shell_lock_auto_locking
 PSEUDOMODULES += shield_w5100
@@ -515,6 +473,7 @@ PSEUDOMODULES += sock_aux_rssi
 PSEUDOMODULES += sock_aux_timestamp
 PSEUDOMODULES += sock_aux_ttl
 PSEUDOMODULES += sock_dtls
+PSEUDOMODULES += sock_dtls_verify_public_key
 PSEUDOMODULES += sock_ip
 PSEUDOMODULES += sock_tcp
 PSEUDOMODULES += sock_udp
@@ -523,6 +482,7 @@ PSEUDOMODULES += soft_uart_modecfg
 PSEUDOMODULES += stdin
 PSEUDOMODULES += stdio_available
 PSEUDOMODULES += stdio_cdc_acm
+PSEUDOMODULES += stdio_dispatch
 PSEUDOMODULES += stdio_ethos
 PSEUDOMODULES += stdio_nimble_debug
 PSEUDOMODULES += stdio_telnet
@@ -580,6 +540,7 @@ PSEUDOMODULES += vfs_auto_mount
 PSEUDOMODULES += vfs_default
 
 PSEUDOMODULES += wakaama_objects_%
+PSEUDOMODULES += wifi_scan_list
 PSEUDOMODULES += wifi_enterprise
 PSEUDOMODULES += xtimer_on_ztimer
 PSEUDOMODULES += xtimer_no_ztimer_default

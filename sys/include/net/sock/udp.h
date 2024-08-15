@@ -295,7 +295,7 @@ typedef struct _sock_tl_ep sock_udp_ep_t;   /**< An end point for a UDP sock obj
 /**
  * @brief   Type for a UDP sock object
  *
- * @note    API implementors: `struct sock_udp` needs to be defined by
+ * @note    API implementers: `struct sock_udp` needs to be defined by
  *         implementation-specific `sock_types.h`.
  */
 typedef struct sock_udp sock_udp_t;
@@ -820,6 +820,26 @@ static inline bool sock_udp_ep_is_multicast(const sock_udp_ep_t *ep)
     }
 
     return false;
+}
+
+/**
+ * @brief   Checks if the IP address of an endpoint is an IPv6 address
+ *
+ * @param[in] ep end point to check
+ *
+ * @returns true if end point is IPv6
+ */
+static inline bool sock_udp_ep_is_v6(const sock_udp_ep_t *ep)
+{
+#if !defined(SOCK_HAS_IPV6)
+    (void)ep;
+    return false;
+#elif !defined(SOCK_HAS_IPV4)
+    (void)ep;
+    return true;
+#else
+    return ep->family == AF_INET6;
+#endif
 }
 
 #include "sock_types.h"

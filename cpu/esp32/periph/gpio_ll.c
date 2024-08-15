@@ -34,9 +34,18 @@
 #include "hal/gpio_hal.h"
 #include "hal/gpio_types.h"
 #include "gpio_ll_arch.h"
-#include "soc/gpio_reg.h"
+#include "soc/gpio_struct.h"
 
 #include "esp_idf_api/gpio.h"
+
+#ifdef MODULE_FMT
+#include "fmt.h"
+#else
+static inline void print_str(const char *str)
+{
+    fputs(str, stdout);
+}
+#endif
 
 /* variables that have to be used together with periph/gpio */
 #ifdef ESP_PM_WUP_PINS
@@ -46,39 +55,12 @@ extern bool _gpio_pin_pd[GPIO_PIN_NUMOF];
 
 static gpio_conf_t _gpio_conf[GPIO_PIN_NUMOF] = { };
 
-const _esp32_port_t _esp32_ports[GPIO_PORT_NUMOF] = {
-    {
-        .out = (uint32_t *)GPIO_OUT_REG,
-        .out_w1ts = (uint32_t *)GPIO_OUT_W1TS_REG,
-        .out_w1tc = (uint32_t *)GPIO_OUT_W1TC_REG,
-        .in = (uint32_t *)GPIO_IN_REG,
-        .enable = (uint32_t *)GPIO_ENABLE_REG,
-        .enable_w1ts = (uint32_t *)GPIO_ENABLE_W1TS_REG,
-        .enable_w1tc = (uint32_t *)GPIO_ENABLE_W1TC_REG,
-        .status_w1tc = (uint32_t *)GPIO_STATUS_W1TC_REG,
-    },
-#if GPIO_PORT_NUMOF > 1
-    {
-        .out = (uint32_t *)GPIO_OUT1_REG,
-        .out_w1ts = (uint32_t *)GPIO_OUT1_W1TS_REG,
-        .out_w1tc = (uint32_t *)GPIO_OUT1_W1TC_REG,
-        .in = (uint32_t *)GPIO_IN1_REG,
-        .enable = (uint32_t *)GPIO_ENABLE1_REG,
-        .enable_w1ts = (uint32_t *)GPIO_ENABLE1_W1TS_REG,
-        .enable_w1tc = (uint32_t *)GPIO_ENABLE1_W1TC_REG,
-        .status_w1tc = (uint32_t *)GPIO_STATUS1_W1TC_REG,
-    }
-#endif
-};
-
-int gpio_ll_init(gpio_port_t port, uint8_t pin, const gpio_conf_t *conf)
+int gpio_ll_init(gpio_port_t port, uint8_t pin, gpio_conf_t conf)
 {
-    assert(port);
-    assert(conf);
-    assert(GPIO_PORT_NUM(port) < GPIO_PORT_NUMOF);
+    assert(is_gpio_port_num_valid(port));
     assert(pin < GPIO_PORT_PIN_NUMOF(port));
 
-    gpio_t gpio = GPIO_PIN(GPIO_PORT_NUM(port), pin);
+    gpio_t gpio = GPIO_PIN(gpio_port_num(port), pin);
 
     gpio_config_t cfg = {
         .pin_bit_mask = (1ULL << gpio),
@@ -87,7 +69,7 @@ int gpio_ll_init(gpio_port_t port, uint8_t pin, const gpio_conf_t *conf)
         .pull_down_en = false,
     };
 
-    switch (conf->state) {
+    switch (conf.state) {
     case GPIO_OUTPUT_PUSH_PULL:
         cfg.mode = GPIO_MODE_DEF_OUTPUT;
         break;
@@ -104,7 +86,7 @@ int gpio_ll_init(gpio_port_t port, uint8_t pin, const gpio_conf_t *conf)
         return -ENOTSUP;
     }
 
-    switch (conf->pull) {
+    switch (conf.pull) {
     case GPIO_FLOATING:
         break;
     case GPIO_PULL_UP:
@@ -134,15 +116,14 @@ int gpio_ll_init(gpio_port_t port, uint8_t pin, const gpio_conf_t *conf)
     _gpio_pin_pd[pin] = cfg.pull_down_en;
 #endif
 
-    if (conf->state == GPIO_DISCONNECT) {
+    if (conf.state == GPIO_DISCONNECT) {
         /* reset the pin to disconnects any other peripheral output configured
            via GPIO Matrix, the pin is reconfigured according to given conf */
         esp_idf_gpio_reset_pin(gpio);
     }
 
     /* since we can't read back the configuration, we have to save it */
-    _gpio_conf[gpio] = *conf;
-    _gpio_conf[gpio].schmitt_trigger = false;
+    _gpio_conf[gpio] = conf;
 
     if (esp_idf_gpio_config(&cfg) != ESP_OK) {
         return -ENOTSUP;
@@ -150,7 +131,7 @@ int gpio_ll_init(gpio_port_t port, uint8_t pin, const gpio_conf_t *conf)
 
     /* if output pin, try to set drive strength */
     gpio_drive_cap_t strength;
-    switch (conf->drive_strength) {
+    switch (conf.drive_strength) {
     case GPIO_DRIVE_WEAKEST:
         strength = GPIO_DRIVE_CAP_0;
         break;
@@ -171,7 +152,7 @@ int gpio_ll_init(gpio_port_t port, uint8_t pin, const gpio_conf_t *conf)
         return -ENOTSUP;
     }
 
-    if (conf->initial_value) {
+    if (conf.initial_value) {
         gpio_ll_set(port, 1UL << pin);
     }
     else {
@@ -181,18 +162,34 @@ int gpio_ll_init(gpio_port_t port, uint8_t pin, const gpio_conf_t *conf)
     return 0;
 }
 
-void gpio_ll_query_conf(gpio_conf_t *dest, gpio_port_t port, uint8_t pin)
+gpio_conf_t gpio_ll_query_conf(gpio_port_t port, uint8_t pin)
 {
-    assert(dest);
+    gpio_conf_t result;
 
     unsigned state = irq_disable();
 
-    *dest = _gpio_conf[GPIO_PIN(GPIO_PORT_NUM(port), pin)];
-    if (dest->state == GPIO_INPUT) {
-        dest->initial_value = (gpio_ll_read(port) >> pin) & 1UL;
+    result = _gpio_conf[GPIO_PIN(gpio_port_num(port), pin)];
+    if (result.state == GPIO_INPUT) {
+        result.initial_value = (gpio_ll_read(port) >> pin) & 1UL;
     }
     else {
-        dest->initial_value = (gpio_ll_read_output(port) >> pin) & 1UL;
+        result.initial_value = (gpio_ll_read_output(port) >> pin) & 1UL;
     }
     irq_restore(state);
+
+    return result;
+}
+
+void gpio_ll_print_conf(gpio_conf_t conf)
+{
+    static const char *drive_strs[] = {
+        [GPIO_DRIVE_WEAKEST] = "weakest",
+        [GPIO_DRIVE_WEAK] = "weak",
+        [GPIO_DRIVE_STRONG] = "strong",
+        [GPIO_DRIVE_STRONGEST] = "strongest",
+    };
+
+    gpio_ll_print_conf_common(conf);
+    print_str(", drive: ");
+    print_str(drive_strs[conf.drive_strength]);
 }

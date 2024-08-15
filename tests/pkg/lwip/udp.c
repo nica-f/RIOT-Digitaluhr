@@ -118,8 +118,8 @@ static int udp_send(char *addr_str, char *data, unsigned int num,
             puts("could not send");
         }
         else {
-            printf("Success: send %u byte over UDP to %s\n",
-                   (unsigned)data_len, addr_str);
+            printf("Success: send %" PRIuSIZE " byte over UDP to %s\n",
+                   data_len, addr_str);
         }
         ztimer_sleep(ZTIMER_USEC, delay);
     }
@@ -129,7 +129,7 @@ static int udp_send(char *addr_str, char *data, unsigned int num,
 static int udp_start_server(char *port_str)
 {
     if (thread_create(server_stack, sizeof(server_stack), THREAD_PRIORITY_MAIN - 1,
-                      THREAD_CREATE_STACKTEST, _server_thread, port_str,
+                      0, _server_thread, port_str,
                       "UDP server") <= KERNEL_PID_UNDEF) {
         return 1;
     }

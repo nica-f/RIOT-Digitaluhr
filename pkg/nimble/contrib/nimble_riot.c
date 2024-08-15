@@ -89,7 +89,7 @@ static void *_host_thread(void *arg)
      */
     thread_create(_stack_controller, sizeof(_stack_controller),
                   NIMBLE_CONTROLLER_PRIO,
-                  THREAD_CREATE_STACKTEST,
+                  0,
                   (thread_task_func_t)nimble_port_ll_task_func, NULL,
                   "nimble_ctrl");
 
@@ -133,7 +133,7 @@ void nimble_riot_init(void)
     /* and finally initialize and run the host */
     thread_create(_stack_host, sizeof(_stack_host),
                   NIMBLE_HOST_PRIO,
-                  THREAD_CREATE_STACKTEST,
+                  0,
                   _host_thread, NULL,
                   "nimble_host");
 
@@ -142,7 +142,7 @@ void nimble_riot_init(void)
     while (!ble_hs_synced()) {}
 
     /* for reducing code duplication, we read our own address type once here
-     * so it can be re-used later on */
+     * so it can be reused later on */
     res = ble_hs_util_ensure_addr(0);
     assert(res == 0);
     res = ble_hs_id_infer_auto(0, &nimble_riot_own_addr_type);

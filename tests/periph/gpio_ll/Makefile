@@ -9,12 +9,12 @@ BOARD ?= nucleo-f767zi
 # pins *must* be on the same port, respectively. Connect the first input to the
 # first output pin and the second input pin to the second output pin, e.g. using
 # jumper wires.
-PORT_IN ?= 1
-PORT_OUT ?= 0
+PORT_IN ?=
+PORT_OUT ?=
 PIN_IN_0 ?= 0
 PIN_IN_1 ?= 1
-PIN_OUT_0 ?= 0
-PIN_OUT_1 ?= 1
+PIN_OUT_0 ?= 2
+PIN_OUT_1 ?= 3
 
 # Boards that require tweaking for low ROM
 LOW_ROM_BOARDS := \
@@ -38,15 +38,21 @@ USEMODULE += ztimer_usec
 
 include $(RIOTBASE)/Makefile.include
 
-CFLAGS += -DPORT_OUT=$(PORT_OUT)
-CFLAGS += -DPORT_IN=$(PORT_IN)
+ifneq (,$(PORT_OUT))
+  CFLAGS += -DPORT_OUT=GPIO_PORT_$(PORT_OUT)
+  CFLAGS += -DPORT_OUT_NUM=$(PORT_OUT)
+endif
+ifneq (,$(PORT_IN))
+  CFLAGS += -DPORT_IN=GPIO_PORT_$(PORT_IN)
+  CFLAGS += -DPORT_IN_NUM=$(PORT_IN)
+endif
 CFLAGS += -DPIN_IN_0=$(PIN_IN_0)
 CFLAGS += -DPIN_IN_1=$(PIN_IN_1)
 CFLAGS += -DPIN_OUT_0=$(PIN_OUT_0)
 CFLAGS += -DPIN_OUT_1=$(PIN_OUT_1)
 CFLAGS += -DLOW_ROM=$(LOW_ROM)
 
-ifneq ($(MCU),esp32)
+ifneq ($(CPU),esp32)
   # We only need 1 thread (+ the Idle thread on some platforms) and we really
   # want this app working on all boards.
   CFLAGS += -DMAXTHREADS=2

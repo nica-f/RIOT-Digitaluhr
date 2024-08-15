@@ -136,7 +136,7 @@ static int udp_send(char *addr_str, char *port_str, char *data, unsigned int num
             puts("could not send");
         }
         else {
-            printf("Success: send %u byte to %s:%u\n", (unsigned)data_len, addr_str, port);
+            printf("Success: send %" PRIuSIZE " byte to %s:%u\n", data_len, addr_str, port);
         }
 
         usleep(delay);
@@ -154,7 +154,7 @@ static int udp_start_server(char *port_str)
     }
     /* start server (which means registering pktdump for the chosen port) */
     if (thread_create(server_stack, sizeof(server_stack), THREAD_PRIORITY_MAIN - 1,
-                      THREAD_CREATE_STACKTEST,
+                      0,
                       _server_thread, port_str, "UDP server") <= KERNEL_PID_UNDEF) {
         server_socket = -1;
         puts("error initializing thread");

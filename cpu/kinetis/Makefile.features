@@ -1,5 +1,6 @@
 FEATURES_PROVIDED += periph_cpuid
 FEATURES_PROVIDED += periph_pm
+FEATURES_PROVIDED += periph_timer_query_freqs
 
 # TRNG driver is not implemented for mkw41z models
 _KINETIS_CPU_MODELS_WITHOUT_HWRNG += mkw41z256vht4 mkw41z512vht4
@@ -34,9 +35,3 @@ else
 endif
 
 include $(RIOTCPU)/cortexm_common/Makefile.features
-
-# This configuration enables modules that are only available when using Kconfig
-# module modelling
-ifeq (1, $(TEST_KCONFIG))
-  KCONFIG_CPU_CONFIG += $(RIOTCPU)/kinetis/kinetis.config
-endif

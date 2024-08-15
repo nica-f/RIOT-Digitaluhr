@@ -24,6 +24,7 @@
 
 #include "eagle_soc.h"
 #include "cpu_conf.h"
+#include "macros/units.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,6 +34,11 @@ extern "C" {
  * @brief   Length of the CPU_ID in octets
  */
 #define CPUID_LEN           (4U)
+
+/**
+ * @brief   CPU cycles per busy wait loop
+ */
+#define CPU_CYCLES_PER_LOOP (5)
 
 /**
  * @name   GPIO configuration
@@ -85,29 +91,30 @@ typedef enum {
 } gpio_flank_t;
 /** @} */
 #endif /* ndef DOXYGEN */
-/** @} */
 
 /**
  * @name   Predefined GPIO names
  * @{
  */
-#define GPIO0       (GPIO_PIN(PORT_GPIO,0))
-#define GPIO1       (GPIO_PIN(PORT_GPIO,1))
-#define GPIO2       (GPIO_PIN(PORT_GPIO,2))
-#define GPIO3       (GPIO_PIN(PORT_GPIO,3))
-#define GPIO4       (GPIO_PIN(PORT_GPIO,4))
-#define GPIO5       (GPIO_PIN(PORT_GPIO,5))
-#define GPIO6       (GPIO_PIN(PORT_GPIO,6))
-#define GPIO7       (GPIO_PIN(PORT_GPIO,7))
-#define GPIO8       (GPIO_PIN(PORT_GPIO,8))
-#define GPIO9       (GPIO_PIN(PORT_GPIO,9))
-#define GPIO10      (GPIO_PIN(PORT_GPIO,10))
-#define GPIO11      (GPIO_PIN(PORT_GPIO,11))
-#define GPIO12      (GPIO_PIN(PORT_GPIO,12))
-#define GPIO13      (GPIO_PIN(PORT_GPIO,13))
-#define GPIO14      (GPIO_PIN(PORT_GPIO,14))
-#define GPIO15      (GPIO_PIN(PORT_GPIO,15))
-#define GPIO16      (GPIO_PIN(PORT_GPIO,16))
+#define GPIO0       (GPIO_PIN(PORT_GPIO, 0))
+#define GPIO1       (GPIO_PIN(PORT_GPIO, 1))
+#define GPIO2       (GPIO_PIN(PORT_GPIO, 2))
+#define GPIO3       (GPIO_PIN(PORT_GPIO, 3))
+#define GPIO4       (GPIO_PIN(PORT_GPIO, 4))
+#define GPIO5       (GPIO_PIN(PORT_GPIO, 5))
+#define GPIO6       (GPIO_PIN(PORT_GPIO, 6))
+#define GPIO7       (GPIO_PIN(PORT_GPIO, 7))
+#define GPIO8       (GPIO_PIN(PORT_GPIO, 8))
+#define GPIO9       (GPIO_PIN(PORT_GPIO, 9))
+#define GPIO10      (GPIO_PIN(PORT_GPIO, 10))
+#define GPIO11      (GPIO_PIN(PORT_GPIO, 11))
+#define GPIO12      (GPIO_PIN(PORT_GPIO, 12))
+#define GPIO13      (GPIO_PIN(PORT_GPIO, 13))
+#define GPIO14      (GPIO_PIN(PORT_GPIO, 14))
+#define GPIO15      (GPIO_PIN(PORT_GPIO, 15))
+#define GPIO16      (GPIO_PIN(PORT_GPIO, 16))
+/** @} */
+
 /** @} */
 
 /**
@@ -260,6 +267,19 @@ typedef enum {
 } spi_ctrl_t;
 
 /**
+ * @brief   Override SPI clock speed values
+ * @{
+ */
+#define HAVE_SPI_CLK_T
+typedef enum {
+    SPI_CLK_100KHZ = KHZ(100), /**< drive the SPI bus with 100KHz */
+    SPI_CLK_400KHZ = KHZ(400), /**< drive the SPI bus with 400KHz */
+    SPI_CLK_1MHZ   = MHZ(1),   /**< drive the SPI bus with 1MHz */
+    SPI_CLK_5MHZ   = MHZ(5),   /**< drive the SPI bus with 5MHz */
+    SPI_CLK_10MHZ  = MHZ(10),  /**< drive the SPI bus with 10MHz */
+} spi_clk_t;
+
+/**
  * @brief   SPI configuration structure type
  */
 typedef struct {
@@ -278,6 +298,8 @@ typedef struct {
 #define PERIPH_SPI_NEEDS_TRANSFER_BYTE  /**< requires function spi_transfer_byte */
 #define PERIPH_SPI_NEEDS_TRANSFER_REG   /**< requires function spi_transfer_reg */
 #define PERIPH_SPI_NEEDS_TRANSFER_REGS  /**< requires function spi_transfer_regs */
+/** @} */
+
 /** @} */
 
 /**

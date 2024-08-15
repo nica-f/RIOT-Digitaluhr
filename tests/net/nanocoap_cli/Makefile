@@ -28,6 +28,7 @@ LOW_MEMORY_BOARDS := \
   saml10-xpro \
   saml11-xpro \
   sipeed-longan-nano \
+  sipeed-longan-nano-tft \
   spark-core \
   stm32f7508-dk \
   stm32mp157c-dk2 \
@@ -47,7 +48,7 @@ ifeq (,$(filter $(BOARD),$(LOW_MEMORY_BOARDS)))
   CFLAGS += -DTHREAD_STACKSIZE_MAIN=\(3*THREAD_STACKSIZE_DEFAULT\)
 
   # always enable auto-format for native
-  ifeq ($(BOARD),native)
+  ifneq (,$(filter native native64,$(BOARD)))
     USEMODULE += vfs_auto_format
   endif
 endif

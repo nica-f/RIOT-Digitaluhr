@@ -172,7 +172,7 @@ static int tcp_send(char *data, unsigned int num, unsigned int delay)
             puts("could not send");
         }
         else {
-            printf("Success: send %u byte over TCP to server\n", (unsigned)data_len);
+            printf("Success: send %" PRIuSIZE " byte over TCP to server\n", data_len);
         }
         ztimer_sleep(ZTIMER_USEC, delay);
     }
@@ -182,7 +182,7 @@ static int tcp_send(char *data, unsigned int num, unsigned int delay)
 static int tcp_start_server(char *port_str)
 {
     if (thread_create(server_stack, sizeof(server_stack), THREAD_PRIORITY_MAIN - 1,
-                      THREAD_CREATE_STACKTEST, _server_thread, port_str,
+                      0, _server_thread, port_str,
                       "TCP server") <= KERNEL_PID_UNDEF) {
         return 1;
     }

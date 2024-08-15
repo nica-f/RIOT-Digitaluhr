@@ -1,8 +1,5 @@
 PORT_LINUX ?= /dev/ttyACM0
 PROGRAMMER ?= dfu-util
-
-ifneq (,$(filter st7735,$(USEMODULE)))
-  CFLAGS += '-DCONFIG_SIPEED_LONGAN_NANO_WITH_TFT=1'
-endif
+OPENOCD_CONFIG ?= $(RIOTBOARD)/common/gd32v/dist/openocd.cfg
 
 include $(RIOTBOARD)/common/gd32v/Makefile.include

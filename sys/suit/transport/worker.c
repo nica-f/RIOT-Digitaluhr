@@ -116,7 +116,7 @@ int suit_handle_url(const char *url)
         return size;
     }
 
-    LOG_INFO("suit_worker: got manifest with size %u\n", (unsigned)size);
+    LOG_INFO("suit_worker: got manifest with size %" PRIdSIZE "\n", size);
 
     return suit_handle_manifest_buf(_manifest_buf, size);
 }
@@ -146,6 +146,21 @@ int suit_handle_manifest_buf(const uint8_t *buffer, size_t size)
     return res;
 }
 
+__attribute__((weak))
+void suit_worker_done_cb(int res)
+{
+    if (res == 0) {
+        LOG_INFO("suit_worker: update successful\n");
+        if (IS_USED(MODULE_SUIT_STORAGE_FLASHWRITE)) {
+            LOG_INFO("suit_worker: rebooting...\n");
+            pm_reboot();
+        }
+    }
+    else {
+        LOG_INFO("suit_worker: update failed, hdr invalid\n ");
+    }
+}
+
 static void *_suit_worker_thread(void *arg)
 {
     (void)arg;
@@ -159,16 +174,7 @@ static void *_suit_worker_thread(void *arg)
         res = suit_handle_url(_url);
     }
 
-    if (res == 0) {
-        LOG_INFO("suit_worker: update successful\n");
-        if (IS_USED(MODULE_SUIT_STORAGE_FLASHWRITE)) {
-            LOG_INFO("suit_worker: rebooting...\n");
-            pm_reboot();
-        }
-    }
-    else {
-        LOG_INFO("suit_worker: update failed, hdr invalid\n ");
-    }
+    suit_worker_done_cb(res);
 
     mutex_unlock(&_worker_lock);
     thread_zombify();
@@ -214,7 +220,7 @@ void suit_worker_trigger(const char *url, size_t len)
     _url[len] = '\0';
 
     _worker_pid = thread_create(_stack, SUIT_WORKER_STACKSIZE, SUIT_COAP_WORKER_PRIO,
-                  THREAD_CREATE_STACKTEST,
+                  0,
                   _suit_worker_thread, NULL, "suit worker");
 }
 
@@ -239,7 +245,7 @@ void suit_worker_trigger_prepared(const uint8_t *buffer, size_t size)
     }
 
     _worker_pid = thread_create(_stack, SUIT_WORKER_STACKSIZE, SUIT_COAP_WORKER_PRIO,
-                  THREAD_CREATE_STACKTEST,
+                  0,
                   _suit_worker_thread, NULL, "suit worker");
 }
 

@@ -507,6 +507,13 @@
  * registered credential in the Sock's credential list, that matches the needed type. The first
  * one that matches is used.
  *
+ * #### Public key verification when using ECC
+ *
+ * By enabling the pseudomodule `sock_dtls_verify_public_key` the DTLS sock will verify the
+ * public key of the remote peer. When enabled, the DTLS sock will only accept a connection if
+ * the provided public key is in the list of public keys assigned to the specified sock. This only
+ * applies when using ECC ciphersuites (i.e., not PSK).
+ *
  * @{
  *
  * @file
@@ -517,6 +524,7 @@
  * @author  Raul A. Fuentes Samaniego <raul.fuentes-samaniego@inria.fr>
  * @author  Daniele Lacamera <daniele@wolfssl.com>
  * @author  Ken Bannister <kb2ma@runbox.com>
+ * @author  Leandro Lanzieri <leandro.lanzieri@haw-hamburg.de>
  */
 
 #ifndef NET_SOCK_DTLS_H
@@ -574,6 +582,20 @@ extern "C" {
 #define SOCK_DTLS_HANDSHAKE     (EXDEV)
 
 /**
+ * @brief Force extended master secret extension
+ */
+#ifndef CONFIG_DTLS_FORCE_EXTENDED_MASTER_SECRET
+#define CONFIG_DTLS_FORCE_EXTENDED_MASTER_SECRET 1
+#endif
+
+/**
+ * @brief Force renegotiation info extension
+ */
+#ifndef CONFIG_DTLS_FORCE_RENEGOTIATION_INFO
+#define CONFIG_DTLS_FORCE_RENEGOTIATION_INFO 1
+#endif
+
+/**
  * @brief DTLS version number
  * @anchor sock_dtls_prot_version
  * @{
@@ -599,7 +621,7 @@ enum {
 /**
  * @brief   Type for a DTLS sock object
  *
- * @note    API implementors: `struct sock_dtls` needs to be defined by
+ * @note    API implementers: `struct sock_dtls` needs to be defined by
  *          an implementation-specific `sock_dtls_types.h`.
  */
 typedef struct sock_dtls sock_dtls_t;

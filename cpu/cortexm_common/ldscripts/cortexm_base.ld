@@ -41,6 +41,7 @@ _backup_ram_len = DEFINED( _backup_ram_len ) ? _backup_ram_len : 0x0 ;
 MEMORY
 {
     bkup_ram (w!rx) : ORIGIN = _backup_ram_start_addr, LENGTH = _backup_ram_len
+    rom_aux  (rx)   : ORIGIN = _rom_start_addr + _slot_aux_offset, LENGTH = _slot_aux_len
 }
 
 /* Section Definitions */
@@ -211,10 +212,6 @@ SECTIONS
     _sram = ORIGIN(ram);
     _eram = ORIGIN(ram) + LENGTH(ram);
 
-    /* Populate information about rom size */
-    _srom = ORIGIN(rom);
-    _erom = ORIGIN(rom) + LENGTH(rom);
-
     _sbackup_data_load = LOADADDR(.backup.data);
     .backup.data :  ALIGN(4) {
         _sbackup_data = .;
@@ -239,9 +236,5 @@ SECTIONS
 
     .flash_writable (NOLOAD) : {
         KEEP(*(SORT(.flash_writable.*)))
-    } > rom
-
-    .end_fw (NOLOAD) : ALIGN(4) {
-        _end_fw = . ;
     } > rom
 }

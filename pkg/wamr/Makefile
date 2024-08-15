@@ -1,10 +1,10 @@
 PKG_NAME=wamr
 PKG_URL=https://github.com/bytecodealliance/wasm-micro-runtime.git
-ifeq ($(PKG_BLEADING),1)
+ifeq ($(PKG_BLEEDING),1)
   PKG_VERSION=main
 else
-  PKG_VERSION=dc4dcc3d6fba42dbe93cf9050fad8e0cfa4b88d0
-  #release tag: WAMR-1.1.1
+  PKG_VERSION=8af155076c6c62d9766ede640cf3f29fa73a4b53
+  #release tag: WAMR-2.1.1
 endif
 PKG_LICENSE=Apache-2.0
 
@@ -24,13 +24,17 @@ CFLAGS += -Wno-cast-function-type
 RIOT_INCLUDES = $(filter-out -%,$(subst -I,,$(INCLUDES)))
 
 #translate (CPU_ARCH) to Build Target
-#WAMR_BUILD_TARGET is "X86_32" "AARCH64[sub]", "ARM[sub]",
+#WAMR_BUILD_TARGET is "X86_32", "X86_64", "AARCH64[sub]", "ARM[sub]",
 #                     "THUMB[sub]", "XTENSA"
 #no msp430, no AVR support for now
 
 ifeq ($(CPU),native)
 ifeq ($(findstring x86,$(OS_ARCH)),x86)
+ifneq (,$(filter arch_32bit,$(FEATURES_USED)))
   WAMR_BUILD_TARGET = X86_32
+else
+  WAMR_BUILD_TARGET = X86_64
+endif
 endif
 ifeq ($(findstring arm,$(OS_ARCH)),arm)
   WAMR_BUILD_TARGET = ARM
@@ -40,7 +44,11 @@ ifeq ($(findstring aarch,$(OS_ARCH)),aarch)
   WAMR_BUILD_TARGET = ARM
 endif
 else ifeq ($(findstring arm,$(CPU_ARCH)),arm)
-  WAMR_BUILD_TARGET = THUMB
+  ifeq ($(findstring cortexm_fpu,$(FEATURES_PROVIDED)),cortexm_fpu)
+    WAMR_BUILD_TARGET = THUMB_VFP
+  else
+    WAMR_BUILD_TARGET = THUMB
+  endif
 else ifeq ($(CPU_ARCH),xtensa)
   WAMR_BUILD_TARGET = XTENSA
 else ifeq ($(CPU_ARCH),rv32)

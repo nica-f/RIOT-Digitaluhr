@@ -42,25 +42,19 @@
 
 #if defined(EXTI_SWIER_SWI0) || defined(EXTI_SWIER_SWIER0)
 #  define EXTI_REG_SWIER        (EXTI->SWIER)
-#endif
-
-#if defined(EXTI_SWIER1_SWI0) || defined(EXTI_SWIER1_SWIER0)
+#elif defined(EXTI_SWIER1_SWI0) || defined(EXTI_SWIER1_SWIER0)
 #  define EXTI_REG_SWIER        (EXTI->SWIER1)
 #endif
 
 #if defined(EXTI_RTSR_RT0) || defined(EXTI_RTSR_TR0)
 #  define EXTI_REG_RTSR         (EXTI->RTSR)
-#endif
-
-#if defined(EXTI_RTSR1_RT0) || defined(EXTI_RTSR1_TR0)
+#elif defined(EXTI_RTSR1_RT0) || defined(EXTI_RTSR1_TR0)
 #  define EXTI_REG_RTSR         (EXTI->RTSR1)
 #endif
 
 #if defined(EXTI_FTSR_FT0) || defined(EXTI_FTSR_TR0)
 #  define EXTI_REG_FTSR         (EXTI->FTSR)
-#endif
-
-#if defined(EXTI_FTSR1_FT0) || defined (EXTI_FTSR1_TR0)
+#elif defined(EXTI_FTSR1_FT0) || defined (EXTI_FTSR1_TR0)
 #  define EXTI_REG_FTSR         (EXTI->FTSR1)
 #endif
 
@@ -81,44 +75,30 @@
 #  define EXTI_REG_IMR          (EXTI->IMR1)
 #endif
 
-#ifdef RCC_APB2ENR_SYSCFGCOMPEN
+#if defined(RCC_APB2ENR_SYSCFGCOMPEN)
 #  define SYSFG_CLOCK           APB2
 #  define SYSFG_ENABLE_MASK     RCC_APB2ENR_SYSCFGCOMPEN
 #elif defined(RCC_APB2ENR_SYSCFGEN)
+#  define SYSFG_CLOCK           APB2
 #  define SYSFG_ENABLE_MASK     RCC_APB2ENR_SYSCFGEN
-#  ifdef APB12
-#    define SYSFG_CLOCK         APB12
-#  else
-#    define SYSFG_CLOCK         APB2
-#  endif
-#endif
-
-#ifdef RCC_APB3ENR_SYSCFGEN
+#elif defined(RCC_APB3ENR_SYSCFGEN)
 #  define SYSFG_CLOCK           APB3
 #  define SYSFG_ENABLE_MASK     RCC_APB3ENR_SYSCFGEN
 #endif
 
-#ifdef EXTI_EXTICR1_EXTI0
+#if defined(EXTI_EXTICR1_EXTI0)
 #  define EXTICR_REG(num)       (EXTI->EXTICR[(num) >> 2])
-#endif
-
-#ifdef SYSCFG_EXTICR1_EXTI0
+#elif defined(SYSCFG_EXTICR1_EXTI0)
 #  define EXTICR_REG(num)       (SYSCFG->EXTICR[(num) >> 2])
-#endif
-
-#ifdef AFIO_EXTICR1_EXTI0
+#elif defined(AFIO_EXTICR1_EXTI0)
 #  define EXTICR_REG(num)       (AFIO->EXTICR[(num) >> 2])
 #endif
 
-#ifdef SYSCFG_EXTICR1_EXTI1_Pos
+#if defined(SYSCFG_EXTICR1_EXTI1_Pos)
 #  define EXTICR_FIELD_SIZE     SYSCFG_EXTICR1_EXTI1_Pos
-#endif
-
-#ifdef EXTI_EXTICR1_EXTI1_Pos
+#elif defined(EXTI_EXTICR1_EXTI1_Pos)
 #  define EXTICR_FIELD_SIZE     EXTI_EXTICR1_EXTI1_Pos
-#endif
-
-#ifdef AFIO_EXTICR1_EXTI1_Pos
+#elif defined(AFIO_EXTICR1_EXTI1_Pos)
 #  define EXTICR_FIELD_SIZE     AFIO_EXTICR1_EXTI1_Pos
 #endif
 
@@ -149,7 +129,7 @@ static IRQn_Type get_irqn(uint8_t pin)
 #if defined(CPU_FAM_STM32L5) ||  defined(CPU_FAM_STM32U5)
     return EXTI0_IRQn + pin;
 #elif defined(CPU_FAM_STM32F0) || defined(CPU_FAM_STM32L0) || \
-    defined(CPU_FAM_STM32G0)
+    defined(CPU_FAM_STM32G0) || defined(CPU_FAM_STM32C0)
     if (pin < 2) {
         return EXTI0_1_IRQn;
     }
@@ -227,7 +207,7 @@ static uint8_t get_exti_port(uint8_t exti_num)
 int gpio_ll_irq(gpio_port_t port, uint8_t pin, gpio_irq_trig_t trig, gpio_ll_cb_t cb, void *arg)
 {
     unsigned irq_state = irq_disable();
-    int port_num = GPIO_PORT_NUM(port);
+    int port_num = gpio_port_num(port);
 
     /* set callback */
     isr_ctx[pin].cb = cb;
@@ -316,8 +296,8 @@ void isr_exti(void)
         /* emulate level triggered IRQs by asserting the IRQ again in software, if needed */
         if (level_triggered & (1UL << pin)) {
             /* Trading a couple of CPU cycles to not having to store port connected to EXTI in RAM.
-             * A simple look up table would save ~6 instructions for the cost 64 byte or RAM. */
-            gpio_port_t port = GPIO_PORT(get_exti_port(pin));
+             * A simple look up table would save ~6 instructions for the cost 64 bytes of RAM. */
+            gpio_port_t port = gpio_port(get_exti_port(pin));
             uint32_t actual_level = gpio_ll_read(port) & (1UL << pin);
             uint32_t trigger_level = EXTI_REG_RTSR & (1UL << pin);
             if (actual_level == trigger_level) {

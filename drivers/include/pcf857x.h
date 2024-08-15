@@ -245,10 +245,12 @@ extern "C"
 {
 #endif
 
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include "kernel_defines.h"
+
 #include "periph/gpio.h"
 #include "periph/i2c.h"
 
@@ -259,10 +261,6 @@ extern "C"
 #if IS_USED(MODULE_PCF857X_IRQ) || DOXYGEN
 #include "event.h"
 #endif /* MODULE_PCF857X_IRQ */
-
-#if !IS_USED(MODULE_PCF8574) && !IS_USED(MODULE_PCF8574A) && !IS_USED(MODULE_PCF8575)
-#error "Please provide a list of pcf857x variants used by the application (pcf8574, pcf8574a or pcf8575)"
-#endif
 
 /**
  * @name    PCF857X I2C slave addresses
@@ -299,7 +297,7 @@ extern "C"
 /** @} */
 
 /** conversion of (port x : pin y) to a pin number */
-#define PCF857X_GPIO_PIN(x,y)  ((gpio_t)((x << 3) | y))
+#define PCF857X_GPIO_PIN(x,y)  (y)
 
 /**
  * @name   Module dependent definitions and declarations
@@ -330,14 +328,18 @@ typedef uint8_t pcf857x_data_t;     /**< type that can mask all expander pins */
 #endif /* MODULE_PCF8575 || DOXYGEN */
 /** @} */
 
-/** Definition of PCF857X driver error codes */
+/**
+ * @brief       Definition of PCF857X driver error codes
+ *
+ * @deprecated  These are aliases for errno error codes now, use them directly
+ */
 typedef enum {
-    PCF857X_OK,                 /**< success */
-    PCF857X_ERROR_I2C,          /**< I2C communication error */
-    PCF857X_ERROR_INV_EXP,      /**< invalid expander variant */
-    PCF857X_ERROR_INV_MODE,     /**< invalid pin mode */
-    PCF857X_ERROR_INV_FLANK,    /**< invalid interrupt flank */
-    PCF857X_ERROR_INT_PIN,      /**< interrupt pin initialization failed */
+    PCF857X_OK              = 0,        /**< success */
+    PCF857X_ERROR_I2C       = ENXIO,    /**< I2C communication error */
+    PCF857X_ERROR_INV_EXP   = ENOTSUP,  /**< invalid expander variant */
+    PCF857X_ERROR_INV_MODE  = EINVAL,   /**< invalid pin mode */
+    PCF857X_ERROR_INV_FLANK = EINVAL,   /**< invalid interrupt flank */
+    PCF857X_ERROR_INT_PIN   = ENOSYS,   /**< interrupt pin initialization failed */
 } pcf857x_error_codes_t;
 
 /**
@@ -457,9 +459,8 @@ typedef struct {
  *      has to be defined by the default configuration parameter
  *      #PCF857X_PARAM_INT_PIN (pcf857x_params_t::int_pin).
  *
- * @retval  PCF857X_OK      on success
- * @retval  PCF857X_ERROR_* a negative error code on error,
- *                           see #pcf857x_error_codes_t
+ * @retval  0                   on success
+ * @retval  <0                  a negative errno error code on error
  */
 int pcf857x_init(pcf857x_t *dev, const pcf857x_params_t *params);
 
@@ -476,15 +477,14 @@ int pcf857x_init(pcf857x_t *dev, const pcf857x_params_t *params);
  *   the driver physically supports only the modes #GPIO_IN_PU and
  *   #GPIO_OD_PU. The other logically identical modes #GPIO_IN, #GPIO_OUT
  *   and #GPIO_OD are emulated. For the #GPIO_IN_PU mode the function returns
- *   with #PCF857X_ERROR_INV_MODE.
+ *   with `-EINVAL`.
  * - After initialization in #GPIO_OUT mode the pin is actively driven LOW,
  *   after initialization in all other modes the pin is pulled-up to HIGH.
  *
- * @retval  PCF857X_OK          on success
- * @retval  PCF857X_ERROR_*     a negative error code on error,
- *                              see #pcf857x_error_codes_t
+ * @retval  0                   on success
+ * @retval  <0                  a negative errno error code on error
  */
-int pcf857x_gpio_init(pcf857x_t *dev, gpio_t pin, gpio_mode_t mode);
+int pcf857x_gpio_init(pcf857x_t *dev, uint8_t pin, gpio_mode_t mode);
 
 #if IS_USED(MODULE_PCF857X_IRQ) || DOXYGEN
 /**
@@ -508,7 +508,7 @@ int pcf857x_gpio_init(pcf857x_t *dev, gpio_t pin, gpio_mode_t mode);
  *   the driver physically supports only the modes #GPIO_IN_PU and
  *   #GPIO_OD_PU. The other logically identical modes #GPIO_IN, #GPIO_OUT
  *   and #GPIO_OD are emulated. For the #GPIO_IN_PU mode the function returns
- *   with #PCF857X_ERROR_INV_MODE.
+ *   with `-EINVAL`.
  * - After initialization in #GPIO_OUT mode the pin is actively driven LOW,
  *   after initialization in all other modes the pin is pulled-up to HIGH.
  *
@@ -519,11 +519,10 @@ int pcf857x_gpio_init(pcf857x_t *dev, gpio_t pin, gpio_mode_t mode);
  * @param[in]   isr     ISR that is called back from interrupt context
  * @param[in]   arg     optional argument passed to the callback
  *
- * @retval  PCF857X_OK          on success
- * @retval  PCF857X_ERROR_*     a negative error code on error,
- *                              see #pcf857x_error_codes_t
+ * @retval  0                   on success
+ * @retval  <0                  a negative errno error code on error
  */
-int pcf857x_gpio_init_int(pcf857x_t *dev, gpio_t pin,
+int pcf857x_gpio_init_int(pcf857x_t *dev, uint8_t pin,
                                           gpio_mode_t mode,
                                           gpio_flank_t flank,
                                           gpio_cb_t isr,
@@ -539,7 +538,7 @@ int pcf857x_gpio_init_int(pcf857x_t *dev, gpio_t pin,
  * @param[in]   dev     descriptor of PCF857X I/O expander device
  * @param[in]   pin     pin to read, use PCF857X_GPIO_PIN(x,y) to specify
  */
-int pcf857x_gpio_read(pcf857x_t *dev, gpio_t pin);
+int pcf857x_gpio_read(pcf857x_t *dev, uint8_t pin);
 
 /**
  * @brief   Write the value to PCF857X input pin
@@ -548,7 +547,7 @@ int pcf857x_gpio_read(pcf857x_t *dev, gpio_t pin);
  * @param[in]   pin     pin to write, use PCF857X_GPIO_PIN(x,y) to specify
  * @param[in]   value   value to write
  */
-void pcf857x_gpio_write(pcf857x_t *dev, gpio_t pin, int value);
+void pcf857x_gpio_write(pcf857x_t *dev, uint8_t pin, int value);
 
 /**
  * @brief   Clear the PCF857X output pin
@@ -556,7 +555,7 @@ void pcf857x_gpio_write(pcf857x_t *dev, gpio_t pin, int value);
  * @param[in]   dev     descriptor of PCF857X I/O expander device
  * @param[in]   pin     pin to clear, use PCF857X_GPIO_PIN(x,y) to specify
  */
-void pcf857x_gpio_clear(pcf857x_t *dev, gpio_t pin);
+void pcf857x_gpio_clear(pcf857x_t *dev, uint8_t pin);
 
 /**
  * @brief   Set the PCF857X output pin
@@ -564,7 +563,7 @@ void pcf857x_gpio_clear(pcf857x_t *dev, gpio_t pin);
  * @param[in]   dev     descriptor of PCF857X I/O expander device
  * @param[in]   pin     pin to set, use PCF857X_GPIO_PIN(x,y) to specify
  */
-void pcf857x_gpio_set(pcf857x_t *dev, gpio_t pin);
+void pcf857x_gpio_set(pcf857x_t *dev, uint8_t pin);
 
 /**
  * @brief   Toggle the value of the PCF857X output pin
@@ -572,7 +571,7 @@ void pcf857x_gpio_set(pcf857x_t *dev, gpio_t pin);
  * @param[in]   dev     descriptor of PCF857X I/O expander device
  * @param[in]   pin     pin to toggle, use PCF857X_GPIO_PIN(x,y) to specify
  */
-void pcf857x_gpio_toggle(pcf857x_t *dev, gpio_t pin);
+void pcf857x_gpio_toggle(pcf857x_t *dev, uint8_t pin);
 
 #if IS_USED(MODULE_PCF857X_IRQ) || DOXYGEN
 /**
@@ -584,7 +583,7 @@ void pcf857x_gpio_toggle(pcf857x_t *dev, gpio_t pin);
  * @param[in]   dev     descriptor of PCF857X I/O expander device
  * @param[in]   pin     pin to enable the interrupt for
  */
-void pcf857x_gpio_irq_enable(pcf857x_t *dev, gpio_t pin);
+void pcf857x_gpio_irq_enable(pcf857x_t *dev, uint8_t pin);
 
 /**
  * @brief   Disable pin interrupt
@@ -595,7 +594,7 @@ void pcf857x_gpio_irq_enable(pcf857x_t *dev, gpio_t pin);
  * @param[in]   dev     descriptor of PCF857X I/O expander device
  * @param[in]   pin     pin to enable the interrupt for
  */
-void pcf857x_gpio_irq_disable(pcf857x_t *dev, gpio_t pin);
+void pcf857x_gpio_irq_disable(pcf857x_t *dev, uint8_t pin);
 #endif /* MODULE_PCF857X_IRQ || DOXYGEN */
 
 #ifdef __cplusplus

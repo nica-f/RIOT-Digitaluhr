@@ -20,6 +20,7 @@
  * @}
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +34,9 @@
 static at_dev_t at_dev;
 static char buf[256];
 static char resp[1024];
+static char rp_buf[256];
+static bool initialized = false;
+static bool is_power_on = false;
 
 static int init(int argc, char **argv)
 {
@@ -47,8 +51,19 @@ static int init(int argc, char **argv)
     uint8_t uart = atoi(argv[1]);
     uint32_t baudrate = atoi(argv[2]);
 
-    int res = at_dev_init(&at_dev, UART_DEV(uart), baudrate, buf, sizeof(buf));
-
+    if (uart >= UART_NUMOF) {
+        printf("Wrong UART device number - should be in range 0-%d.\n", UART_NUMOF - 1);
+        return 1;
+    }
+    at_dev_init_t at_init_params = {
+        .baudrate = baudrate,
+        .rp_buf = rp_buf,
+        .rp_buf_size = sizeof(rp_buf),
+        .rx_buf = buf,
+        .rx_buf_size = sizeof(buf),
+        .uart = UART_DEV(uart),
+    };
+    int res = at_dev_init(&at_dev, &at_init_params);
     /* check the UART initialization return value and respond as needed */
     if (res == UART_NODEV) {
         puts("Invalid UART device given!");
@@ -58,6 +73,8 @@ static int init(int argc, char **argv)
         puts("Baudrate is not applicable!");
         return 1;
     }
+
+    initialized = true;
 
     return res;
 }
@@ -69,13 +86,25 @@ static int send(int argc, char **argv)
         return 1;
     }
 
+    if (initialized == false) {
+        puts("Error: AT device not initialized.\n");
+        puts("Execute init function first.\n");
+        return 1;
+    }
+
+    if (is_power_on == false) {
+        puts("Error: AT device not power on.\n");
+        puts("Execute power_on function first.\n");
+        return 1;
+    }
+
     ssize_t len;
     if ((len = at_send_cmd_get_resp(&at_dev, argv[1], resp, sizeof(resp), 10 * US_PER_SEC)) < 0) {
         puts("Error");
         return 1;
     }
 
-    printf("Response (len=%d): %s\n", (int)len, resp);
+    printf("Response (len=%" PRIdSIZE "): %s\n", len, resp);
 
     return 0;
 }
@@ -84,6 +113,18 @@ static int send_ok(int argc, char **argv)
 {
     if (argc < 2) {
         printf("Usage: %s <command>\n", argv[0]);
+        return 1;
+    }
+
+    if (initialized == false) {
+        puts("Error: AT device not initialized.\n");
+        puts("Execute init function first.\n");
+        return 1;
+    }
+
+    if (is_power_on == false) {
+        puts("Error: AT device not power on.\n");
+        puts("Execute power_on function first.\n");
         return 1;
     }
 
@@ -104,13 +145,26 @@ static int send_lines(int argc, char **argv)
         return 1;
     }
 
+    if (initialized == false) {
+        puts("Error: AT device not initialized.\n");
+        puts("Execute init function first.\n");
+        return 1;
+    }
+
+    if (is_power_on == false) {
+        puts("Error: AT device not power on.\n");
+        puts("Execute power_on function first.\n");
+        return 1;
+    }
+
     ssize_t len;
-    if ((len = at_send_cmd_get_lines(&at_dev, argv[1], resp, sizeof(resp), true, 10 * US_PER_SEC)) < 0) {
+    if ((len = at_send_cmd_get_lines(&at_dev, argv[1], resp, sizeof(resp),
+                                         10 * US_PER_SEC)) < 0) {
         puts("Error");
         return 1;
     }
 
-    printf("Response (len=%d): %s\n", (int)len, resp);
+    printf("Response (len=%" PRIdSIZE "): %s\n", len, resp);
 
     return 0;
 }
@@ -124,12 +178,24 @@ static int send_recv_bytes(int argc, char **argv)
         return 1;
     }
 
+    if (initialized == false) {
+        puts("Error: AT device not initialized.\n");
+        puts("Execute init function first.\n");
+        return 1;
+    }
+
+    if (is_power_on == false) {
+        puts("Error: AT device not power on.\n");
+        puts("Execute power_on function first.\n");
+        return 1;
+    }
+
     sprintf(buffer, "%s%s", argv[1], CONFIG_AT_SEND_EOL);
     at_send_bytes(&at_dev, buffer, strlen(buffer));
 
     ssize_t len = at_recv_bytes(&at_dev, buffer, atoi(argv[2]), 10 * US_PER_SEC);
 
-    printf("Response (len=%d): %s\n", (int)len, buffer);
+    printf("Response (len=%" PRIdSIZE "): %s\n", len, buffer);
 
     return 0;
 }
@@ -146,6 +212,18 @@ static int send_recv_bytes_until_string(int argc, char **argv)
         return 1;
     }
 
+    if (initialized == false) {
+        puts("Error: AT device not initialized.\n");
+        puts("Execute init function first.\n");
+        return 1;
+    }
+
+    if (is_power_on == false) {
+        puts("Error: AT device not power on.\n");
+        puts("Execute power_on function first.\n");
+        return 1;
+    }
+
     sprintf(buffer, "%s%s", argv[1], CONFIG_AT_SEND_EOL);
     at_send_bytes(&at_dev, buffer, strlen(buffer));
     memset(buffer, 0, sizeof(buffer));
@@ -158,7 +236,7 @@ static int send_recv_bytes_until_string(int argc, char **argv)
         return 1;
     }
 
-    printf("Response (len=%d): %s\n", (int)len, buffer);
+    printf("Response (len=%" PRIdSIZE "): %s\n", len, buffer);
     return 0;
 }
 
@@ -178,6 +256,7 @@ static int power_on(int argc, char **argv)
     (void)argv;
 
     at_dev_poweron(&at_dev);
+    is_power_on = true;
 
     puts("Powered on");
 
@@ -190,6 +269,7 @@ static int power_off(int argc, char **argv)
     (void)argv;
 
     at_dev_poweroff(&at_dev);
+    is_power_on = false;
 
     puts("Powered off");
 
@@ -280,6 +360,112 @@ static int remove_urc(int argc, char **argv)
 }
 #endif
 
+static int emulate_dce(int argc, char **argv)
+{
+    (void)argc;
+    (void)argv;
+
+    int res = 0;
+    char resp_buf[128];
+
+#ifdef MODULE_AT_URC
+    at_urc_t urc = {.cb = _urc_cb, .code = "+CSCON"};
+    at_add_urc(&at_dev, &urc);
+#endif
+
+    res = at_send_cmd_wait_ok(&at_dev, "AT+CFUN=1", US_PER_SEC);
+    if (res) {
+        printf("%u: Error AT+CFUN=1: %d\n", __LINE__, res);
+        res = 1;
+        goto exit;
+    }
+
+    res = at_send_cmd(&at_dev, "AT+CFUN=1", US_PER_SEC);
+    if (res) {
+        printf("%u: Error AT+CFUN=1: %d\n", __LINE__, res);
+        res = 1;
+        goto exit;
+    }
+    res = at_wait_ok(&at_dev, US_PER_SEC);
+    if (res) {
+        printf("%u: Error AT+CFUN=1: %d\n", __LINE__, res);
+        res = 1;
+        goto exit;
+    }
+
+    res = at_send_cmd_get_resp_wait_ok(&at_dev, "AT+CEREG?",
+                                    "+CEREG:", resp_buf,
+                                    sizeof(resp_buf), US_PER_SEC);
+    if (res < 0) {
+        printf("%u: Error AT+CEREG?: %d\n", __LINE__, res);
+        res = 1;
+        goto exit;
+    }
+
+    res = at_send_cmd_wait_prompt(&at_dev, "AT+USECMNG=0,0,\"cert\",128", US_PER_SEC);
+    if (res) {
+        printf("%u: Error AT+USECMNG: %d\n", __LINE__, res);
+        res =  1;
+        goto exit;
+    }
+
+    res = at_send_cmd_wait_prompt(&at_dev, "AT+PROMPTERROR", US_PER_SEC);
+    if (res != -AT_ERR_EXTENDED) {
+        printf("%u: Error AT+PROMPTERROR: %d\n", __LINE__, res);
+        res =  1;
+        goto exit;
+    }
+    res = atol(at_get_err_info(&at_dev));
+    if (res != 1984) {
+        printf("%u: Error AT+PROMPTERROR: %d\n", __LINE__, res);
+        res =  1;
+        goto exit;
+    }
+
+    res = at_send_cmd_wait_ok(&at_dev, "AT+CFUN=8", US_PER_SEC);
+    if (res != -1) {
+        printf("%u: Error AT+CFUN=8: %d\n", __LINE__, res);
+        res =  1;
+        goto exit;
+    }
+
+    res = at_send_cmd_wait_ok(&at_dev, "AT+CFUN=9", US_PER_SEC);
+    if (res != -AT_ERR_EXTENDED) {
+        printf("%u: Error AT+CFUN=9: %d\n", __LINE__, res);
+        res =  1;
+        goto exit;
+    }
+
+    res = atol(at_get_err_info(&at_dev));
+    if (res != 666) {
+        printf("%u: Error AT+CFUN=9: %d\n", __LINE__, res);
+        res = 1;
+        goto exit;
+    }
+
+    res = at_send_cmd_get_lines(&at_dev, "AT+GETTWOLINES", resp_buf,
+                                sizeof(resp_buf), US_PER_SEC);
+    if (res < 0) {
+        printf("%u: Error AT+GETTWOLINES: %d\n", __LINE__, res);
+        res = 1;
+        goto exit;
+    }
+
+    if (strcmp(resp_buf, "first_line\nsecond_line\nOK")) {
+        printf("%u: Error AT+GETTWOLINES: response not matching\n", __LINE__);
+        res = 1;
+        goto exit;
+    }
+
+    res = 0;
+exit:
+#ifdef MODULE_AT_URC
+    at_remove_urc(&at_dev, &urc);
+#endif
+    printf("%s finished with %d\n", __func__, res);
+    return res;
+}
+
 static const shell_command_t shell_commands[] = {
     { "init", "Initialize AT device", init },
     { "send", "Send a command and wait response", send },
@@ -291,6 +477,7 @@ static const shell_command_t shell_commands[] = {
     { "drain", "Drain AT device", drain },
     { "power_on", "Power on AT device", power_on },
     { "power_off", "Power off AT device", power_off },
+    { "emulate_dce", "Test against the DCE emulation script.", emulate_dce},
 #ifdef MODULE_AT_URC
     { "add_urc", "Register an URC", add_urc },
     { "remove_urc", "De-register an URC", remove_urc },

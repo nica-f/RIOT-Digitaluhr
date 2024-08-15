@@ -27,7 +27,7 @@ static volatile int indicator;
 static kernel_pid_t main_pid;
 static char stack[THREAD_STACKSIZE_DEFAULT];
 
-#ifdef BOARD_NATIVE
+#ifdef CPU_NATIVE
 static const unsigned KITERATIONS = 100;
 #else
 static const unsigned KITERATIONS = 10;
@@ -56,7 +56,7 @@ int main(void)
     kernel_pid_t second_pid = thread_create(stack,
                   sizeof(stack),
                   THREAD_PRIORITY_MAIN - 1,
-                  THREAD_CREATE_WOUT_YIELD | THREAD_CREATE_STACKTEST,
+                  THREAD_CREATE_WOUT_YIELD,
                   second_thread,
                   NULL,
                   "second_thread");

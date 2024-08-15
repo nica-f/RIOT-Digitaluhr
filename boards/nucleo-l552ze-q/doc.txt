@@ -6,7 +6,7 @@
 ## Overview
 
 The Nucleo-L552ZE-Q is a board from ST's Nucleo family supporting ARM Cortex-M33
-STM32L552ZE ultra-low-pawer microcontroller with TrustZone, 256KiB or RAM and 512KiB
+STM32L552ZE ultra-low-pawer microcontroller with TrustZone, 256KiB of RAM and 512KiB
 of Flash.
 
 ## Hardware
@@ -26,7 +26,7 @@ of Flash.
 | TrustZone    | yes                          |
 | Timers       | 16                           |
 | UARTs        | 6 (3xUSART, 2xUART, 1xLPUART)|
-| I2cs         | 4                            |
+| I2Cs         | 4                            |
 | SPIs         | 3                            |
 | CAN          | 1                            |
 | Datasheet    | [Datasheet](https://www.st.com/resource/en/datasheet/stm32l552ze.pdf)|

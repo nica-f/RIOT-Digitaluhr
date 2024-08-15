@@ -107,6 +107,27 @@ static const tc32_conf_t timer_config[] = {
 /** @} */
 
 /**
+ * @name CAN configuration
+ * @{
+ */
+/** Available CAN interfaces */
+static const can_conf_t candev_conf[] = {
+    {
+        .can = CAN1,
+        .rx_pin = GPIO_PIN(PB, 13),
+        .tx_pin = GPIO_PIN(PB, 12),
+        .gclk_src = SAM0_GCLK_PERIPH,
+    }
+};
+
+/** CAN 1 configuration */
+#define ISR_CAN1    isr_can1
+
+/** Number of CAN interfaces */
+#define CAN_NUMOF         ARRAY_SIZE(candev_conf)
+/** @} */
+
+/**
  * @name UART configuration
  * @{
  */
@@ -115,10 +136,6 @@ static const uart_conf_t uart_config[] = {
         .dev      = &SERCOM2->USART,
         .rx_pin   = GPIO_PIN(PB, 24),
         .tx_pin   = GPIO_PIN(PB, 25),
-#ifdef MODULE_PERIPH_UART_HW_FC
-        .rts_pin  = GPIO_UNDEF,
-        .cts_pin  = GPIO_UNDEF,
-#endif
         .mux      = GPIO_MUX_D,
         .rx_pad   = UART_PAD_RX_1,
         .tx_pad   = UART_PAD_TX_0,
@@ -130,12 +147,16 @@ static const uart_conf_t uart_config[] = {
         .rx_pin   = GPIO_PIN(PA, 5),
         .tx_pin   = GPIO_PIN(PA, 4),
 #ifdef MODULE_PERIPH_UART_HW_FC
-        .rts_pin  = GPIO_UNDEF,
-        .cts_pin  = GPIO_UNDEF,
+        .rts_pin  = GPIO_PIN(PA, 6),
+        .cts_pin  = GPIO_PIN(PA, 7),
 #endif
         .mux      = GPIO_MUX_D,
         .rx_pad   = UART_PAD_RX_1,
+#ifdef MODULE_PERIPH_UART_HW_FC
+        .tx_pad   = UART_PAD_TX_0_RTS_2_CTS_3,
+#else
         .tx_pad   = UART_PAD_TX_0,
+#endif
         .flags    = UART_FLAG_NONE,
         .gclk_src = SAM0_GCLK_PERIPH,
     },
@@ -143,10 +164,6 @@ static const uart_conf_t uart_config[] = {
         .dev      = &SERCOM5->USART,
         .rx_pin   = GPIO_PIN(PB, 17),
         .tx_pin   = GPIO_PIN(PB, 16),
-#ifdef MODULE_PERIPH_UART_HW_FC
-        .rts_pin  = GPIO_UNDEF,
-        .cts_pin  = GPIO_UNDEF,
-#endif
         .mux      = GPIO_MUX_C,
         .rx_pad   = UART_PAD_RX_1,
         .tx_pad   = UART_PAD_TX_0,
@@ -157,10 +174,6 @@ static const uart_conf_t uart_config[] = {
         .dev      = &SERCOM1->USART,
         .rx_pin   = GPIO_PIN(PC, 23),
         .tx_pin   = GPIO_PIN(PC, 22),
-#ifdef MODULE_PERIPH_UART_HW_FC
-        .rts_pin  = GPIO_UNDEF,
-        .cts_pin  = GPIO_UNDEF,
-#endif
         .mux      = GPIO_MUX_C,
         .rx_pad   = UART_PAD_RX_1,
         .tx_pad   = UART_PAD_TX_0,
@@ -369,6 +382,18 @@ static const adc_conf_chan_t adc_channels[] = {
  */
 #define SDHC_DEV            SDHC1       /**< The SDHC instance to use */
 #define SDHC_DEV_ISR        isr_sdhc1   /**< Interrupt service routing for SDHC1 */
+
+/** SDHC devices */
+static const sdhc_conf_t sdhc_config[] = {
+    {
+        .sdhc = SDHC1,
+        .cd = GPIO_PIN(PD, 20),
+        .wp = GPIO_UNDEF,
+    },
+};
+
+/** Number of configured SDHC devices */
+#define SDHC_CONFIG_NUMOF  1
 /** @} */
 
 /**
@@ -390,6 +415,18 @@ static const sam0_common_gmac_config_t sam_gmac_config[] = {
         .mdio = GPIO_PIN(PC, 12),
         .rst_pin = GPIO_PIN(PC, 21),
         .int_pin = GPIO_PIN(PD, 12),
+    }
+};
+/** @} */
+
+/**
+ * @name FREQM peripheral configuration
+ * @{
+ */
+static const freqm_config_t freqm_config[] = {
+    {
+        .pin = GPIO_PIN(PB, 17),
+        .gclk_src = SAM0_GCLK_32KHZ
     }
 };
 /** @} */

@@ -20,6 +20,7 @@
 #include <assert.h>
 
 #include "dtls.h"
+#include "crypto.h"
 #include "log.h"
 #include "net/sock/dtls.h"
 #include "net/credman.h"
@@ -59,7 +60,8 @@ static int _read(struct dtls_context_t *ctx, session_t *session, uint8_t *buf,
                  size_t len);
 static int _event(struct dtls_context_t *ctx, session_t *session,
                   dtls_alert_level_t level, unsigned short code);
-
+static void _get_user_parameters(struct dtls_context_t *ctx,
+                    session_t *session, dtls_user_parameters_t *user_parameters);
 static void _session_to_ep(const session_t *session, sock_udp_ep_t *ep);
 static void _ep_to_session(const sock_udp_ep_t *ep, session_t *session);
 static uint32_t _update_timeout(uint32_t start, uint32_t timeout);
@@ -68,6 +70,7 @@ static dtls_handler_t _dtls_handler = {
     .event = _event,
     .write = _write,
     .read = _read,
+    .get_user_parameters = _get_user_parameters,
 #ifdef CONFIG_DTLS_PSK
     .get_psk_info = _get_psk_info,
 #endif /* CONFIG_DTLS_PSK */
@@ -118,7 +121,7 @@ static int _write(struct dtls_context_t *ctx, session_t *session, uint8_t *buf, 
     ssize_t res = sock_udp_send(sock->udp_sock, buf, len, &remote);
 
     if (res < 0) {
-        DEBUG("sock_dtls: failed to send DTLS record: %d\n", (int)res);
+        DEBUG("sock_dtls: failed to send DTLS record: %" PRIdSIZE "\n", res);
     }
     return res;
 }
@@ -136,9 +139,6 @@ static int _event(struct dtls_context_t *ctx, session_t *session,
             break;
         case DTLS_EVENT_CONNECTED:
             DEBUG("sock_dtls: event connected\n");
-            break;
-        case DTLS_EVENT_RENEGOTIATE:
-            DEBUG("sock_dtls: event renegotiate\n");
             break;
         }
     }
@@ -176,6 +176,15 @@ static int _event(struct dtls_context_t *ctx, session_t *session,
     }
 #endif
     return 0;
+}
+
+static void _get_user_parameters(struct dtls_context_t *ctx,
+                    session_t *session, dtls_user_parameters_t *user_parameters) {
+  (void) ctx;
+  (void) session;
+
+  user_parameters->force_extended_master_secret = CONFIG_DTLS_FORCE_EXTENDED_MASTER_SECRET;
+  user_parameters->force_renegotiation_info = CONFIG_DTLS_FORCE_RENEGOTIATION_INFO;
 }
 
 #ifdef CONFIG_DTLS_PSK
@@ -366,11 +375,59 @@ static int _get_ecdsa_key(struct dtls_context_t *ctx, const session_t *session,
     return 0;
 }
 
+static int _verify_public_ecdsa_key(credman_credential_t *credential,
+                                    const unsigned char *other_pub_x,
+                                    const unsigned char *other_pub_y)
+{
+    /* check if any of the available client keys match the provided one */
+    for (unsigned i = 0; i < credential->params.ecdsa.client_keys_size; i++) {
+        if (memcmp(credential->params.ecdsa.client_keys[i].x, other_pub_x, DTLS_EC_KEY_SIZE) == 0 &&
+            memcmp(credential->params.ecdsa.client_keys[i].y, other_pub_y, DTLS_EC_KEY_SIZE) == 0) {
+            DEBUG("sock_dtls: client key %d matches\n", i);
+            return 0;
+        }
+    }
+
+    DEBUG("sock_dtls: credential does not match\n");
+    return 1;
+}
+
 static int _verify_ecdsa_key(struct dtls_context_t *ctx,
                              const session_t *session,
                              const unsigned char *other_pub_x,
                              const unsigned char *other_pub_y, size_t key_size)
 {
+    if (IS_USED(MODULE_SOCK_DTLS_VERIFY_PUBLIC_KEY)) {
+        int ret;
+        credman_credential_t credential;
+        sock_dtls_t *sock = (sock_dtls_t *)dtls_get_app_data(ctx);
+
+        credential.tag = CREDMAN_TAG_EMPTY;
+        DEBUG("sock_dtls: verifying ECDSA public key of the other peer\n");
+
+        /* first check public key size */
+        if (key_size != DTLS_EC_KEY_SIZE) {
+            DEBUG("sock_dtls: invalid key length: %d (expected %d)\n", key_size, DTLS_EC_KEY_SIZE);
+            return dtls_alert_fatal_create(DTLS_ALERT_BAD_CERTIFICATE);
+        }
+
+        /* check if any of the available credentials match the provided one */
+        for (unsigned i = 0; i < sock->tags_len; i++) {
+            ret = credman_get(&credential, sock->tags[i], CREDMAN_TYPE_ECDSA);
+            if (ret != CREDMAN_OK) {
+                continue;
+            }
+
+            if (!_verify_public_ecdsa_key(&credential, other_pub_x, other_pub_y)) {
+                return 0;
+            }
+        }
+
+        /* we could not find a valid credential */
+        DEBUG("sock_dtls: no valid credential registered\n");
+        return dtls_alert_fatal_create(DTLS_ALERT_BAD_CERTIFICATE);
+    }
+
     (void)ctx;
     (void)session;
     (void)other_pub_y;
@@ -796,7 +853,7 @@ ssize_t sock_dtls_recv_aux(sock_dtls_t *sock, sock_dtls_session_t *remote,
         res = sock_udp_recv_aux(sock->udp_sock, data, max_len, timeout,
                                 &ep, (sock_udp_aux_rx_t *)aux);
         if (res <= 0) {
-            DEBUG("sock_dtls: error receiving UDP packet: %d\n", (int)res);
+            DEBUG("sock_dtls: error receiving UDP packet: %" PRIdSIZE "\n", res);
             return res;
         }
 
@@ -861,7 +918,7 @@ ssize_t sock_dtls_recv_buf_aux(sock_dtls_t *sock, sock_dtls_session_t *remote,
             continue;
         }
         if (res < 0) {
-            DEBUG("sock_dtls: error receiving UDP packet: %d\n", (int)res);
+            DEBUG("sock_dtls: error receiving UDP packet: %" PRIdSIZE "\n", res);
             return res;
         }
 
@@ -977,7 +1034,7 @@ void _udp_cb(sock_udp_t *udp_sock, sock_async_flags_t flags, void *ctx)
         ssize_t res = sock_udp_recv_buf(udp_sock, &data, &data_ctx, 0,
                                         &remote_ep);
         if (res <= 0) {
-            DEBUG("sock_dtls: error receiving UDP packet: %d\n", (int)res);
+            DEBUG("sock_dtls: error receiving UDP packet: %" PRIdSIZE "\n", res);
             return;
         }
 

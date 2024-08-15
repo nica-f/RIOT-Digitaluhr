@@ -86,10 +86,13 @@ riotboot/flash-bootloader: riotboot/bootloader/flash
 riotboot/bootloader/%: $$(if $$(filter riotboot/bootloader/clean,$$@),,$$(BUILDDEPS) pkg-prepare)
 	$(Q)/usr/bin/env -i \
 		QUIET=$(QUIET) PATH="$(PATH)" USER="$(USER)"\
-		EXTERNAL_BOARD_DIRS="$(EXTERNAL_BOARD_DIRS)" BOARD=$(BOARD)\
+		INCLUDES="$(INCLUDES)"\
+		EXTERNAL_BOARD_DIRS="$(EXTERNAL_BOARD_DIRS)" BOARD=$(BOARD) \
+		OPENOCD_DEBUG_ADAPTER=$(OPENOCD_DEBUG_ADAPTER) \
 		DEBUG_ADAPTER_ID=$(DEBUG_ADAPTER_ID) \
 		IOTLAB_NODE=$(IOTLAB_NODE) \
 		PROGRAMMER=$(PROGRAMMER) PROGRAMMER_QUIET=$(PROGRAMMER_QUIET) \
+		SLOT_AUX_LEN=$(SLOT_AUX_LEN) \
 			$(MAKE) --no-print-directory -C $(RIOTBOOT_DIR) $*
 
 # Generate a binary file from the bootloader which fills all the

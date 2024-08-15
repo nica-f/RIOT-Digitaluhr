@@ -19,6 +19,7 @@ EXPECTED_HELP = (
     'end_test             ends a test',
     'echo                 prints the input command',
     'empty                print nothing on command',
+    'periodic             periodically print command',
     'app_metadata         Returns application metadata',
     'pm                   interact with layered PM subsystem',
     'ps                   Prints information about running threads.',
@@ -186,7 +187,7 @@ def check_erase_long_line(child, longline):
     # FIXME: this only works on native, due to #10634 combined with socat
     # insisting in line-buffering the terminal.
 
-    if BOARD == 'native':
+    if BOARD in ['native', 'native64']:
         longline_erased = longline + "\b"*len(longline) + "echo"
         child.sendline(longline_erased)
         child.expect_exact('"echo"')
@@ -200,14 +201,26 @@ def check_control_d(child):
     # The current shell instance was initiated by shell_run(). The shell will respawn
     # automatically except on native. On native, RIOT is shut down completely,
     # therefore exclude this part.
-    if BOARD != 'native':
+    if BOARD not in ['native', 'native64']:
         child.sendline(CONTROL_D)
         child.expect_exact(PROMPT)
 
 
+def check_preempt(child):
+    child.expect(PROMPT)
+    child.sendline('periodic 5')
+
+    child.expect_exact('test')
+    child.expect_exact('test')
+    child.expect_exact('test')
+    child.expect_exact('test')
+    child.expect_exact('test')
+    child.sendline('')
+
+
 def testfunc(child):
     # avoid sending an extra empty line on native.
-    if BOARD == 'native':
+    if BOARD in ['native', 'native64']:
         child.crlf = '\n'
 
     bufsize = check_and_get_bufsize(child)
@@ -223,6 +236,8 @@ def testfunc(child):
     check_erase_long_line(child, longline)
 
     check_control_d(child)
+
+    check_preempt(child)
 
     # loop other defined commands and expected output
     for cmd, expected in CMDS:

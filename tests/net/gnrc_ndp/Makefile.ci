@@ -8,8 +8,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     atmega328p-xplained-mini \
     atmega8 \
     i-nucleo-lrwan1 \
-    msb-430 \
-    msb-430h \
+    nucleo-c031c6 \
     nucleo-f030r8 \
     nucleo-f031k6 \
     nucleo-f042k6 \
@@ -25,5 +24,5 @@ BOARD_INSUFFICIENT_MEMORY := \
     stm32l0538-disco \
     telosb \
     waspmote-pro \
-    z1 \
+    weact-g030f6 \
     #

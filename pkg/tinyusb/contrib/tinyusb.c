@@ -19,6 +19,7 @@
 
 #if IS_USED(MODULE_AUTO_INIT)
 #include "auto_init_utils.h"
+#include "auto_init_priorities.h"
 #endif
 
 #define ENABLE_DEBUG    0
@@ -76,9 +77,9 @@ int tinyusb_setup(void)
                              sizeof(_tinyusb_thread_stack),
                              TINYUSB_PRIORITY,
 #if MODULE_RIOTBOOT_TINYUSB_DFU
-                             THREAD_CREATE_STACKTEST,
+                             0,
 #else
-                             THREAD_CREATE_WOUT_YIELD | THREAD_CREATE_STACKTEST,
+                             THREAD_CREATE_WOUT_YIELD,
 #endif
                              _tinyusb_thread_impl, NULL, "tinyusb")) < 0) {
         LOG_ERROR("tinyUSB thread couldn't be created, reason %d\n", res);

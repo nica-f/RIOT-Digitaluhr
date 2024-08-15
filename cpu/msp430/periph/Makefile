@@ -11,6 +11,8 @@ ifeq (msp430_f2xx_g2xx,$(CPU_FAM))
   SERIAL_IP_BLOCK := usci
 endif
 
+SRC += $(SERIAL_IP_BLOCK).c
+
 # select family specific peripheral drivers.
 ifneq (,$(filter periph_uart,$(USEMODULE)))
   SRC += uart_$(SERIAL_IP_BLOCK).c

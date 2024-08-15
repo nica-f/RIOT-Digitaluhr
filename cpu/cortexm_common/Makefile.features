@@ -7,6 +7,7 @@ FEATURES_PROVIDED += cpu_core_cortexm
 FEATURES_PROVIDED += dbgpin
 FEATURES_PROVIDED += libstdcpp
 FEATURES_PROVIDED += newlib
+FEATURES_PROVIDED += periph_flashpage_aux
 FEATURES_PROVIDED += periph_pm
 FEATURES_PROVIDED += puf_sram
 FEATURES_PROVIDED += picolibc
@@ -35,6 +36,7 @@ else ifeq ($(CPU_CORE),cortex-m3)
   RUST_TARGET = thumbv7m-none-eabi
 else ifeq ($(CPU_CORE),cortex-m33)
   CPU_ARCH := armv8m
+  FEATURES_PROVIDED += cortexm_stack_limit
   #RUST_TARGET = thumbv8m.main-none-eabi
 else ifeq ($(CPU_CORE),cortex-m4)
   CPU_ARCH := armv7m

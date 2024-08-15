@@ -231,10 +231,22 @@ static bool _accept_remote(const sock_udp_t *sock, const udp_hdr_t *hdr,
               ipv6_addr_to_str(addr_str, (ipv6_addr_t *)&sock->remote.addr, sizeof(addr_str)));
         DEBUG(", source (%s) does not match\n",
               ipv6_addr_to_str(addr_str, (ipv6_addr_t *)&remote->addr, sizeof(addr_str)));
-        return false;
+        if (CONFIG_GNRC_SOCK_UDP_CHECK_REMOTE_ADDR) {
+            return false;
+        }
     }
 
     return true;
+}
+
+static uint32_t _now_us(void)
+{
+#ifdef MODULE_ZTIMER_USEC
+    return ztimer_now(ZTIMER_USEC);
+#endif
+#ifdef MODULE_ZTIMER_MSEC
+    return ztimer_now(ZTIMER_MSEC) * US_PER_MS;
+#endif
 }
 
 ssize_t sock_udp_recv_buf_aux(sock_udp_t *sock, void **data, void **buf_ctx,
@@ -274,7 +286,26 @@ ssize_t sock_udp_recv_buf_aux(sock_udp_t *sock, void **data, void **buf_ctx,
         _aux.rssi = &aux->rssi;
     }
 #endif
-    res = gnrc_sock_recv((gnrc_sock_reg_t *)sock, &pkt, timeout, &tmp, &_aux);
+    unsigned now = _now_us();
+    while (1) {
+        res = gnrc_sock_recv((gnrc_sock_reg_t *)sock, &pkt, timeout, &tmp, &_aux);
+
+        if (res != -ETIMEDOUT) {
+            break;
+        }
+
+        /* HACK: gnrc_sock_recv() sometimes returns -ETIMEDOUT too early */
+        uint32_t time_elapsed = _now_us() - now;
+        if (time_elapsed < (timeout - timeout/10))  {
+            DEBUG("gnrc_sock_udp: timeout happened  %"PRIu32" µs early\n",
+                  timeout - time_elapsed);
+            timeout -= time_elapsed;
+            now = _now_us();
+            continue;
+        }
+        break;
+    }
+
     if (res < 0) {
         return res;
     }
@@ -394,6 +425,7 @@ ssize_t sock_udp_sendv_aux(sock_udp_t *sock,
     if ((aux != NULL) && (aux->flags & SOCK_AUX_SET_LOCAL)) {
         local.family = aux->local.family;
         local.netif = aux->local.netif;
+        src_port = aux->local.port;
         memcpy(&local.addr, &aux->local.addr, sizeof(local.addr));
 
         aux->flags &= ~SOCK_AUX_SET_LOCAL;

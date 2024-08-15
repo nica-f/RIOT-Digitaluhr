@@ -106,7 +106,7 @@ static int dtls_handle_read(dtls_context_t *ctx)
 
     if (res <= 0) {
         if ((ENABLE_DEBUG) && (res != -EAGAIN) && (res != -ETIMEDOUT)) {
-            DEBUG("sock_udp_recv unexpected code error: %i\n", (int)res);
+            DEBUG("sock_udp_recv unexpected code error: %" PRIiSIZE "\n", res);
         }
         return 0;
     }
@@ -379,7 +379,7 @@ static void start_server(void)
     _dtls_server_pid = thread_create(_dtls_server_stack,
                                      sizeof(_dtls_server_stack),
                                      THREAD_PRIORITY_MAIN - 1,
-                                     THREAD_CREATE_STACKTEST,
+                                     0,
                                      _dtls_server_wrapper, NULL, "DTLS_Server");
 
     /* Uncommon but better be sure */

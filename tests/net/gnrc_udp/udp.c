@@ -158,7 +158,7 @@ static void send(char *addr_str, char *port_str, char *data_len_str, unsigned in
         }
         /* access to `payload` was implicitly given up with the send operation above
          * => use original variable for output */
-        printf("Success: send %u byte to [%s]:%u\n", (unsigned)data_len, addr_str,
+        printf("Success: send %" PRIuSIZE " byte to [%s]:%u\n", data_len, addr_str,
                port);
         xtimer_usleep(delay);
     }
@@ -183,7 +183,7 @@ static void start_server(char *port_str)
     if (server_pid <= KERNEL_PID_UNDEF) {
         /* start server */
         server_pid = thread_create(server_stack, sizeof(server_stack), SERVER_PRIO,
-                                   THREAD_CREATE_STACKTEST, _eventloop, NULL, "UDP server");
+                                   0, _eventloop, NULL, "UDP server");
         if (server_pid <= KERNEL_PID_UNDEF) {
             puts("Error: can not start server thread");
             return;

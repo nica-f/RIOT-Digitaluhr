@@ -20,6 +20,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     microbit \
     nrf51dongle \
     nrf6310 \
+    nucleo-c031c6 \
     nucleo-f030r8 \
     nucleo-f031k6 \
     nucleo-f042k6 \
@@ -37,6 +38,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     sensebox_samd21 \
     serpente \
     sipeed-longan-nano \
+    sipeed-longan-nano-tft \
     slstk3400a \
     sodaq-autonomo \
     sodaq-explorer \
@@ -47,6 +49,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     stm32f0discovery \
     stm32g0316-disco \
     stm32l0538-disco \
+    weact-g030f6 \
     wemos-zero \
     yarm \
     yunjia-nrf51822 \

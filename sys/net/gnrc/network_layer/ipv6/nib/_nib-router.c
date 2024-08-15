@@ -86,18 +86,18 @@ void _handle_snd_mc_ra(gnrc_netif_t *netif)
 
 void _snd_rtr_advs(gnrc_netif_t *netif, const ipv6_addr_t *dst, bool final)
 {
-#if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
-    _nib_abr_entry_t *abr = NULL;
+    if (IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C) && gnrc_netif_is_6lr(netif)) {
+        _nib_abr_entry_t *abr = NULL;
 
-    DEBUG("nib: Send router advertisements for each border router:\n");
-    while ((abr = _nib_abr_iter(abr))) {
-        DEBUG("    - %s\n", ipv6_addr_to_str(addr_str, &abr->addr,
-                                             sizeof(addr_str)));
-        _snd_ra(netif, dst, final, abr);
+        DEBUG("nib: Send router advertisements for each border router:\n");
+        while ((abr = _nib_abr_iter(abr))) {
+            DEBUG("    - %s\n", ipv6_addr_to_str(addr_str, &abr->addr,
+                                                 sizeof(addr_str)));
+            _snd_ra(netif, dst, final, abr);
+        }
+    } else {
+        _snd_ra(netif, dst, final, NULL);
     }
-#else   /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
-    _snd_ra(netif, dst, final, NULL);
-#endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
 }
 
 static gnrc_pktsnip_t *_offl_to_pio(_nib_offl_entry_t *offl,
@@ -111,8 +111,14 @@ static gnrc_pktsnip_t *_offl_to_pio(_nib_offl_entry_t *offl,
     uint8_t flags = 0;
     uint32_t valid_ltime = (offl->valid_until == UINT32_MAX) ? UINT32_MAX :
                            ((offl->valid_until - now) / MS_PER_SEC);
-    uint32_t pref_ltime = (offl->pref_until == UINT32_MAX) ? UINT32_MAX :
-                          ((offl->pref_until - now) / MS_PER_SEC);
+    uint32_t pref_ltime = offl->pref_until;
+    if (pref_ltime != UINT32_MAX) { /* reserved for infinite lifetime */
+        if (pref_ltime >= now) { /* avoid overflow */
+            pref_ltime = (pref_ltime - now) / MS_PER_SEC;
+        } else {
+            pref_ltime = 0; /* deprecated */
+        }
+    }
 
     DEBUG("nib: Build PIO for %s/%u\n",
           ipv6_addr_to_str(addr_str, &offl->pfx, sizeof(addr_str)),
@@ -244,7 +250,8 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
         ext_opts = rdnsso;
     }
 #endif  /* CONFIG_GNRC_IPV6_NIB_DNS */
-    if (gnrc_netif_is_6ln(netif)) {
+    if (gnrc_netif_is_6lr(netif)) {
+        assert(abr != NULL);
 #if IS_ACTIVE(CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C)
         uint16_t ltime_min;
         gnrc_pktsnip_t *abro;
@@ -293,7 +300,7 @@ static gnrc_pktsnip_t *_build_ext_opts(gnrc_netif_t *netif,
         ext_opts = abro;
 #endif  /* CONFIG_GNRC_IPV6_NIB_MULTIHOP_P6C */
     }
-    else {
+    else if (!gnrc_netif_is_6ln(netif)) {
         (void)abr;
         while ((pfx = _nib_offl_iter(pfx))) {
             if ((pfx->mode & _PL) && (_nib_onl_get_if(pfx->next_hop) == id)) {

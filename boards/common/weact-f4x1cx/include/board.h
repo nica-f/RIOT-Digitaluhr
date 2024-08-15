@@ -25,7 +25,6 @@
 extern "C" {
 #endif
 
-#include "mtd.h"
 #include "periph_cpu.h"
 
 /**
@@ -41,6 +40,7 @@ extern "C" {
  * @{
  */
 #define LED0_PIN_NUM        13
+#define LED0_PORT           GPIO_PORT_C /**< GPIO port of LED 0 */
 #define LED0_PORT_NUM       PORT_C
 #define LED0_IS_INVERTED    1
 /** @} */
@@ -73,8 +73,7 @@ extern "C" {
  * @name MTD configuration
  * @{
  */
-extern mtd_dev_t *mtd0;
-#define MTD_0 mtd0
+#define MTD_0 mtd_dev_get(0)
 /** @} */
 
 #ifdef __cplusplus

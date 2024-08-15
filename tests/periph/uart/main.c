@@ -22,13 +22,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "board.h"
 #include "shell.h"
 #include "thread.h"
 #include "msg.h"
 #include "ringbuffer.h"
 #include "periph/uart.h"
-#include "xtimer.h"
+#include "ztimer.h"
 
 #ifdef MODULE_STDIO_UART
 #include "stdio_uart.h"
@@ -44,7 +43,7 @@
 #define PRINTER_PRIO        (THREAD_PRIORITY_MAIN - 1)
 #define PRINTER_TYPE        (0xabcd)
 
-#define POWEROFF_DELAY      (250U * US_PER_MS)      /* quarter of a second */
+#define POWEROFF_DELAY_MS   (250U)
 
 /* if stdio is not done via UART, allow to use the stdio UART for the test */
 #ifndef MODULE_STDIO_UART
@@ -58,6 +57,13 @@
 #ifndef STX
 #define STX 0x2
 #endif
+
+static char *_endline = "\n";
+
+static void _write_newline(uart_t dev)
+{
+    uart_write(dev, (uint8_t *)_endline, strlen(_endline));
+}
 
 typedef struct {
     char rx_mem[UART_BUFSIZE];
@@ -185,7 +191,10 @@ static void *printer(void *arg)
         do {
             c = (int)ringbuffer_get_one(&(ctx[dev].rx_buf));
             if (c == '\n') {
-                puts("]\\n");
+                printf("\\n");
+            }
+            else if (c == '\r') {
+                printf("\\r");
             }
             else if (c >= ' ' && c <= '~') {
                 printf("%c", c);
@@ -194,6 +203,7 @@ static void *printer(void *arg)
                 printf("0x%02x", (unsigned char)c);
             }
         } while (c != '\n');
+        puts("]");
     }
 
     /* this should never be reached */
@@ -204,7 +214,7 @@ static void sleep_test(int num, uart_t uart)
 {
     printf("UARD_DEV(%i): test uart_poweron() and uart_poweroff()  ->  ", num);
     uart_poweroff(uart);
-    xtimer_usleep(POWEROFF_DELAY);
+    ztimer_sleep(ZTIMER_MSEC, POWEROFF_DELAY_MS);
     uart_poweron(uart);
     puts("[OK]");
 }
@@ -226,7 +236,7 @@ static int cmd_init(int argc, char **argv)
     baud = strtol(argv[2], NULL, 0);
 
     /* initialize UART */
-    res = uart_init(UART_DEV(dev), baud, rx_cb, (void *)dev);
+    res = uart_init(UART_DEV(dev), baud, rx_cb, (void *)(intptr_t)dev);
     if (res == UART_NOBAUD) {
         printf("Error: Given baudrate (%u) not possible\n", (unsigned int)baud);
         return 1;
@@ -243,6 +253,27 @@ static int cmd_init(int argc, char **argv)
 
     return 0;
 }
+
+SHELL_COMMAND(init, "Initialize a UART device with a given baudrate", cmd_init);
+
+static int cmd_off(int argc, char **argv)
+{
+    if (argc != 2) {
+        printf("usage: %s <dev>\n", argv[0]);
+        return 1;
+    }
+
+    int dev = parse_dev(argv[1]);
+    if (dev < 0) {
+        return 1;
+    }
+
+    uart_poweroff(UART_DEV(dev));
+
+    return 0;
+}
+
+SHELL_COMMAND(off, "Power off the given UART device", cmd_off);
 
 #ifdef MODULE_PERIPH_UART_MODECFG
 static int cmd_mode(int argc, char **argv)
@@ -310,12 +341,13 @@ static int cmd_mode(int argc, char **argv)
 
     return 0;
 }
+
+SHELL_COMMAND(mode, "Setup data bits, stop bits and parity for a given UART device", cmd_mode);
 #endif /* MODULE_PERIPH_UART_MODECFG */
 
 static int cmd_send(int argc, char **argv)
 {
     int dev;
-    uint8_t endline = (uint8_t)'\n';
 
     if (argc < 3) {
         printf("usage: %s <dev> <data (string)>\n", argv[0]);
@@ -329,9 +361,11 @@ static int cmd_send(int argc, char **argv)
 
     printf("UART_DEV(%i) TX: %s\n", dev, argv[2]);
     uart_write(UART_DEV(dev), (uint8_t *)argv[2], strlen(argv[2]));
-    uart_write(UART_DEV(dev), &endline, 1);
+    _write_newline(UART_DEV(dev));
     return 0;
 }
+
+SHELL_COMMAND(send, "Send a string through given UART device", cmd_send);
 
 static int cmd_test(int argc, char **argv)
 {
@@ -361,15 +395,37 @@ static int cmd_test(int argc, char **argv)
     return 0;
 }
 
-static const shell_command_t shell_commands[] = {
-    { "init", "Initialize a UART device with a given baudrate", cmd_init },
-#ifdef MODULE_PERIPH_UART_MODECFG
-    { "mode", "Setup data bits, stop bits and parity for a given UART device", cmd_mode },
-#endif
-    { "send", "Send a string through given UART device", cmd_send },
-    { "test", "Run an automated test on a UART with RX and TX connected", cmd_test },
-    { NULL, NULL, NULL }
-};
+SHELL_COMMAND(test, "Run an automated test on a UART with RX and TX connected", cmd_test);
+
+static int cmd_eol_cr(int argc, char **argv)
+{
+    (void)argc;
+    (void)argv;
+    _endline = "\r";
+    return 0;
+}
+
+SHELL_COMMAND(eol_cr, "Set CR as the end-of-line for send", cmd_eol_cr);
+
+static int cmd_eol_lf(int argc, char **argv)
+{
+    (void)argc;
+    (void)argv;
+    _endline = "\n";
+    return 0;
+}
+
+SHELL_COMMAND(eol_lf, "Set LF as the end-of-line for send (default)", cmd_eol_lf);
+
+static int cmd_eol_crlf(int argc, char **argv)
+{
+    (void)argc;
+    (void)argv;
+    _endline = "\r\n";
+    return 0;
+}
+
+SHELL_COMMAND(eol_crlf, "Set CRLF as the end-of-line for send", cmd_eol_crlf);
 
 int main(void)
 {
@@ -410,6 +466,6 @@ int main(void)
 
     /* run the shell */
     char line_buf[SHELL_BUFSIZE];
-    shell_run(shell_commands, line_buf, SHELL_BUFSIZE);
+    shell_run(NULL, line_buf, SHELL_BUFSIZE);
     return 0;
 }

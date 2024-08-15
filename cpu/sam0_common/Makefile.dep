@@ -10,13 +10,17 @@ ifneq (,$(filter periph_spi,$(USEMODULE)))
   USEMODULE += periph_spi_gpio_mode
 endif
 
+ifneq (,$(filter periph_sdmmc,$(USEMODULE)))
+  USEMODULE += sdmmc_sdhc
+endif
+
 # include sam0 common periph drivers
 USEMODULE += sam0_common_periph
 
 ifneq (,$(filter sam0_eth,$(USEMODULE)))
   USEMODULE += iolist
   USEMODULE += netdev_eth
-  USEMODULE += netdev_legacy_api
+  USEMODULE += netdev_new_api
   USEMODULE += netopt
   FEATURES_REQUIRED += periph_eth
   FEATURES_REQUIRED += periph_gpio_irq

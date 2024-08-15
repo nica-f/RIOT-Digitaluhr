@@ -24,11 +24,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "debug.h"
+#include "atomic_utils.h"
+#include "busy_wait.h"
 #include "macros/math.h"
 #include "macros/units.h"
+#include "modules.h"
 #include "periph_conf.h"
-#include "periph_cpu.h"
 
 #ifdef RSEL3
 #define RSEL_MASK (RSEL0 | RSEL1 | RSEL2 | RSEL3)
@@ -39,6 +40,7 @@
 #endif
 
 uint32_t msp430_dco_freq;
+static uint8_t msp430_clock_refcounts[MSP430_CLOCK_NUMOF];
 
 static inline bool is_dco_in_use(const msp430_clock_params_t *params)
 {
@@ -51,8 +53,15 @@ static inline bool is_valid_low_freq(uint32_t freq) {
     return (freq == 32768);
 }
 
-/* As high speed crystal anything between 450 kHz and 8 MHz is allowed */
+/* Valid parameter range for the high speed crystal by family:
+ * MSP430 x1xx: 450 kHz <= f <= 8 MHz
+ * MSP430 F2xx / G2xx: 400 kHz <= f <= 16 MHz
+ */
 static inline bool is_valid_high_freq(uint32_t freq) {
+    if (IS_ACTIVE(CPU_FAM_MSP430_F2XX_G2XX)) {
+        return ((freq >= KHZ(400)) && (freq <= MHZ(16)));
+    }
+
     return ((freq >= KHZ(450)) && (freq <= MHZ(8)));
 }
 
@@ -68,8 +77,7 @@ static inline bool is_valid_high_freq(uint32_t freq) {
 static void check_config(void)
 {
     /* LFXT1 can either be a low frequency 32.768 kHz watch crystal or a
-     * high frequency crustal between 450 kHz and 8 MHz. We cannot function
-     * without this crystal */
+     * high frequency crystal. We cannot function without this crystal */
     if (!is_valid_low_freq(clock_params.lfxt1_frequency)
             && !is_valid_high_freq(clock_params.lfxt1_frequency)) {
         extern void lfxt1_frequency_invalid(void);
@@ -77,7 +85,8 @@ static void check_config(void)
     }
 
     /* XT2 is not required and may be configured as 0 Hz to indicate its
-     * absence. If it is present, we require 450 kHz <= XT <= 8 MHz */
+     * absence. If it is present, it must but a valid frequency for a high
+     * frequency crystal. */
     if ((clock_params.xt2_frequency != 0) &&
             !is_valid_high_freq(clock_params.xt2_frequency)) {
         extern void xt2_frequency_invalid(void);
@@ -96,22 +105,6 @@ static void check_config(void)
             && (clock_params.target_dco_frequency == 0)) {
         extern void dco_configured_as_clock_source_but_is_disabled(void);
         dco_configured_as_clock_source_but_is_disabled();
-    }
-}
-
-static void busy_wait(uint16_t loops)
-{
-    while (loops) {
-        /* This empty inline assembly should be enough to convince the
-         * compiler that the loop cannot be optimized out. Tested with
-         * GCC 12.2 and clang 16.0.0 successfully. */
-        __asm__ __volatile__ (
-            ""
-            : /* no outputs */
-            : /* no inputs */
-            : /* no clobbers */
-        );
-        loops--;
     }
 }
 
@@ -334,10 +327,10 @@ void default_clock_init(void)
 
     /* if DCO is not used at all, disable it to preserve power */
     if (clock_params.target_dco_frequency == 0) {
-        /* Setting bit SCG0 in the status register (r2) disables the DCO.
+        /* Setting bit SCG0 in the status register (SR) disables the DCO.
          * We do so in assembly, as r2 is not memory mapped. */
         __asm__ __volatile__ (
-            "bis %[scg0], r2"           "\n\t"
+            "bis %[scg0], SR"           "\n\t"
             : /* no outputs */
             : /* inputs: */
               [scg0]        "i"(SCG0) /* bitmask to set SCGO0 as immediate */
@@ -348,7 +341,8 @@ void default_clock_init(void)
 
 __attribute__((weak, alias("default_clock_init"))) void clock_init(void);
 
-uint32_t msp430_submain_clock_freq(void) {
+uint32_t PURE msp430_submain_clock_freq(void)
+{
     uint16_t shift = (clock_params.submain_clock_divier >> 1) & 0x3;
     switch (clock_params.submain_clock_source) {
     case SUBMAIN_CLOCK_SOURCE_LFXT1CLK:
@@ -365,8 +359,66 @@ uint32_t msp430_submain_clock_freq(void) {
     }
 }
 
-uint32_t msp430_auxiliary_clock_freq(void)
+uint32_t PURE msp430_auxiliary_clock_freq(void)
 {
     uint16_t shift = (clock_params.auxiliary_clock_divier >> 4) & 0x3;
     return clock_params.lfxt1_frequency >> shift;
+}
+
+void msp430_clock_acquire(msp430_clock_t clock)
+{
+    assume((unsigned)clock < MSP430_CLOCK_NUMOF);
+    uint8_t before = atomic_fetch_add_u8(&msp430_clock_refcounts[clock], 1);
+    (void)before;
+    assert(before < UINT8_MAX);
+}
+
+void msp430_clock_release(msp430_clock_t clock)
+{
+    assume((unsigned)clock < MSP430_CLOCK_NUMOF);
+    uint8_t before = atomic_fetch_sub_u8(&msp430_clock_refcounts[clock], 1);
+    (void)before;
+    assert(before > 0);
+}
+
+void pm_set_lowest(void)
+{
+    /* disable IRQs, wait two cycles for this to take effect, backup
+     * state register */
+    uint16_t state;
+    __asm__ volatile(
+        "bic %[gie], SR"                    "\n\t"
+        "nop"                               "\n\t"
+        "nop"                               "\n\t"
+        "mov.w SR, %[state]"                "\n\t"
+        : [state]   "=r"(state)
+        : [gie]     "i"(GIE)
+        : "memory"
+    );
+
+    /* When applying the power safe mode, we want to be able to wake up again.
+     * So set global interrupt enable then. */
+    state |= GIE;
+    /* disabling CPU works always, even when keeping the clocks running */
+    state |= CPUOFF | SCG0;
+
+    if (msp430_clock_refcounts[MSP430_CLOCK_SUBMAIN] == 0) {
+        state |= SCG1;
+    }
+
+    if (msp430_clock_refcounts[MSP430_CLOCK_AUXILIARY] == 0) {
+        state |= OSCOFF;
+    }
+
+    /* Write new state. This should not need NOPs before and after, but the
+     * assembler warning about possibly disabled IRQs cannot be disabled, so
+     * let's waste two instructions for less noise. */
+    __asm__ volatile(
+        "nop"                               "\n\t"
+        "mov.w %[state], SR"                "\n\t"
+        "nop"                               "\n\t"
+        : /* no outputs */
+        : [state]   "r"(state)
+        : "memory"
+    );
 }

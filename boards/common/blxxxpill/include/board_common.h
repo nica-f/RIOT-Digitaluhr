@@ -33,6 +33,7 @@ extern "C" {
  * @{
  */
 #ifndef LED0_PORT_NUM
+#define LED0_PORT           GPIO_PORT_C /**< GPIO port of LED 0 */
 #define LED0_PORT_NUM       PORT_C                                  /**< GPIO Port number the LED is connected to */
 #endif
 #ifndef LED0_PIN_NUM
@@ -56,14 +57,6 @@ extern "C" {
 #define XTIMER_BACKOFF      (19)
 /** @} */
 
-/* The boards debug header only exports  SWD, so JTAG-only pins PA15, PB3(*),
- * and PB4 can be remapped as regular GPIOs instead. (Note: PB3 is also used as
- * SWO.  The user needs to take care to not enable SWO with the debugger while
- * at the same time PB3 is used as GPIO. But RIOT does not use SWO in any case,
- * so if a user adds this feature in her/his own code, she/he should be well
- * aware of this.)
- */
-#define STM32F1_DISABLE_JTAG    /**< Disable JTAG to allow pins being used as GPIOs */
 #ifdef __cplusplus
 }
 #endif

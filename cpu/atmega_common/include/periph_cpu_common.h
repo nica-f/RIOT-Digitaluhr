@@ -73,16 +73,16 @@ typedef uint8_t gpio_t;
 #ifdef GPIO_PORT_DESCENDENT
 #ifdef      _AVR_ATTINY1634_H_INCLUDED
 /*          the only one that requires particular treatment! */
-#define     ATMEGA_GPIO_BASE_A  (0x2F)
+#define     ATMEGA_GPIO_BASE_A  0x2F
 #else
 /*          all other port descendent, including :
              - _AVR_IO8534_ (only have port A but with 0x1B address) ;
              - _AVR_IOAT94K_H_ (only have ports D and E) ;
              - _AVR_IOTN28_H_ (only have ports A and D). */
-#define     ATMEGA_GPIO_BASE_A  (0x39)
+#define     ATMEGA_GPIO_BASE_A  0x39
 #endif /*   _AVR_ATTINY1634_H_INCLUDED */
 #else /* !GPIO_PORT_DESCENDENT */
-#define     ATMEGA_GPIO_BASE_A  (0x20)
+#define     ATMEGA_GPIO_BASE_A  0x20
 #endif /* GPIO_PORT_DESCENDENT */
 /**
  * @brief   Base of the GPIO port G register as memory address
@@ -231,13 +231,15 @@ typedef enum {
     GPIO_TRIGGER_LEVEL_HIGH     = 0xff, /**< not supported */
 } gpio_irq_trig_t;
 
-#define HAVE_GPIO_PULL_T
+#define HAVE_GPIO_STATE_T
 typedef enum {
-    GPIO_FLOATING = 0,
-    GPIO_PULL_UP = 1,
-    GPIO_PULL_DOWN = 0xfe,  /*< not supported */
-    GPIO_PULL_KEEP = 0xff,  /*< not supported */
-} gpio_pull_t;
+    GPIO_INPUT,
+    GPIO_OUTPUT_PUSH_PULL,
+    GPIO_OUTPUT_OPEN_DRAIN,     /**< not supported */
+    GPIO_OUTPUT_OPEN_SOURCE,    /**< not supported */
+    GPIO_USED_BY_PERIPHERAL,    /**< not supported */
+    GPIO_DISCONNECT             = GPIO_INPUT,
+} gpio_state_t;
 
 #define HAVE_GPIO_LL_PREPARE_WRITE_ALL_PINS
 #define HAVE_GPIO_LL_PREPARE_WRITE

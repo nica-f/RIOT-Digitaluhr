@@ -30,6 +30,7 @@
 #include "clk_conf.h"
 #include "cfg_rtt_default.h"
 #include "cfg_usb_otg_fs.h"
+#include "lcd_fmc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,7 +106,7 @@ static const adc_conf_t adc_config[] = {
     { .pin = GPIO_PIN(PORT_C, 0),  .dev = 1, .chan = 13 }, /* A5, ADC12_IN13, SB28 closed */
     { .pin = GPIO_UNDEF, .dev = 0, .chan = 0 },            /* V_REFINT, ADC1_IN0  */
     { .pin = GPIO_UNDEF, .dev = 0, .chan = 18 },           /* V_BAT, ADC1_IN18  */
-#ifndef MODULE_PERIPH_DAC
+#if !MODULE_PERIPH_DAC
     { .pin = GPIO_PIN(PORT_A, 4),  .dev = 0, .chan =  9 }, /* STMOD+_ADC, ADC12_IN9 */
 #else
     { .pin = GPIO_UNDEF,  .dev = 1, .chan = 17 },          /* DAC1, ADC2_IN17 */
@@ -152,7 +153,7 @@ static const adc_conf_t adc_config[] = {
  */
 static const dac_conf_t dac_config[] = {
     { GPIO_PIN(PORT_A, 4), .chan = 0 },     /* STMod+_ADC pin */
-#ifndef MODULE_PERIPH_SPI
+#if !MODULE_PERIPH_SPI
     { GPIO_PIN(PORT_A, 5), .chan = 1 },     /* Arduino D13, conflicts with SPI_DEV(0) */
 #endif
 };
@@ -253,12 +254,55 @@ static const fmc_bank_conf_t fmc_bank_config[] = {
                            .bus_turnaround = 1, },  /* 1 HCLK a 12.5 ns */
         },
     },
+    /* bank 1, subbank 1 is used for LCD with asynchronuous
+     * access in Mode 1, i.e. write timings are not used */
+    {
+        .bank = FMC_BANK_1,
+        .mem_type = FMC_SRAM,
+        .data_width = FMC_BUS_WIDTH_16BIT,
+        .address = 0x60000000,  /* Bank 1, subbank 1 is mapped to 0x60000000 */
+        .size = 2,              /* 1 word for command @ 0x60000000 and
+                                   1 word for data @ 0x60080000 */
+        .nor_sram = {
+            .sub_bank = 1,
+            .ext_mode = false,                      /* Mode 1 used, no separate w_timing */
+                                                    /* timing requirements for ST7789H2:
+                                                       - t_AST min 0 ns (Address setup time)
+                                                       - t_DST min 10 ns (Data setup time)
+                                                       - t_WRL min 15 ns (WE LOW time)
+                                                       - t_WRH min 15 ns (WE HIGH time)
+                                                       - t_WRC min 66 ns (WE cycle time) */
+            .r_timing = {  .addr_setup = 1,         /* t_AST = 12 ns (1 HCLKs a 12.5 ns) */
+                           .data_setup = 3,         /* t_DST = 37 ns (3 HCLKs a 12.5 ns) */
+                           .bus_turnaround = 2, },  /* t_WRH = 25 ns (2 HCLKs a 12.5 ns) */
+        },
+    },
 };
 
 /**
  * @brief   Number of configured FMC banks
  */
 #define FMC_BANK_NUMOF  ARRAY_SIZE(fmc_bank_config)
+
+/**
+ * @brief   Descriptors of FMC banks used for LCDs
+ */
+static const lcd_fmc_desc_t lcd_fmc_desc[] = {
+    {
+        .bank = FMC_BANK_CONFIG(1), /* second bank (fmc_bank_config[1]) is used */
+        .cmd_offset = 0x0,          /* address 0x60000000 (offset 0x00000) used for commands */
+        .data_offset = 0x80000,     /* address 0x60080000 (offset 0x80000) used for data */
+    }
+};
+
+/**
+ * @brief   Number of LCDs using FMC banks
+ *
+ * Because it is used by the preprocessor it has to be a number.
+ * The @ref ARRAY_SIZE can't be used here.
+ */
+#define LCD_FMC_NUMOF  1
+
 /** @} */
 
 /**
@@ -354,6 +398,41 @@ static const pwm_conf_t pwm_config[] = {
 /** @} */
 
 /**
+ * @name SDIO/SDMMC configuration
+ * @{
+ */
+
+/**
+ * @brief SDIO/SDMMC static configuration struct
+ */
+static const sdmmc_conf_t sdmmc_config[] = {
+    {
+        .dev = SDMMC1,
+        .bus = APB2,
+        .rcc_mask = RCC_APB2ENR_SDMMC1EN,
+        .cd = GPIO_UNDEF,           /* CD is connected to MFX GPIO8 */
+        .clk = { GPIO_PIN(PORT_C, 12), GPIO_AF12 },
+        .cmd = { GPIO_PIN(PORT_D,  2), GPIO_AF12 },
+        .dat0 = { GPIO_PIN(PORT_C,  8), GPIO_AF12 },
+        .dat1 = { GPIO_PIN(PORT_C,  9), GPIO_AF12 },
+        .dat2 = { GPIO_PIN(PORT_C, 10), GPIO_AF12 },
+        .dat3 = { GPIO_PIN(PORT_C, 11), GPIO_AF12 },
+#if MODULE_PERIPH_DMA
+        .dma = 6,
+        .dma_chan = 7,
+#endif
+        .irqn = SDMMC1_IRQn
+    },
+};
+
+/**
+ * @brief Number of configured SDIO/SDMMC peripherals
+ */
+#define SDMMC_CONFIG_NUMOF  1
+
+/** @} */
+
+/**
  * @name   SPI configuration
  *
  * @note By default, solder bridges SB6, SB7, SB8 are closed and USART1 is
@@ -378,14 +457,14 @@ static const spi_conf_t spi_config[] = {
         .cs_af    = GPIO_AF5,
         .rccmask  = RCC_APB2ENR_SPI1EN,
         .apbbus   = APB2,
-#if IS_USED(MODULE_PERIPH_DMA)
+#if MODULE_PERIPH_DMA
         .rx_dma   = 0,                        /* DMA1 Channel 2 */
         .rx_dma_chan = 1,                     /* CxS = 1 */
         .tx_dma   = 1,                        /* DMA1 Channel 3 */
         .tx_dma_chan = 1,                     /* CxS = 1 */
 #endif
     },
-#if IS_USED(MODULE_PERIPH_SPI_STMOD)
+#if MODULE_PERIPH_SPI_STMOD
     {   /* Pmod/STMod+ connector if solder bridges SB4, SB5, SB9 are closed */
         .dev      = SPI2,
         .mosi_pin = GPIO_PIN(PORT_B, 15),
@@ -398,7 +477,7 @@ static const spi_conf_t spi_config[] = {
         .cs_af    = GPIO_AF5,
         .rccmask  = RCC_APB1ENR1_SPI2EN,
         .apbbus   = APB1,
-#if IS_USED(MODULE_PERIPH_DMA)
+#if MODULE_PERIPH_DMA
         .rx_dma   = 2,                        /* DMA1 Channel 4 */
         .rx_dma_chan = 1,                     /* CxS = 1 */
         .tx_dma   = 3,                        /* DMA1 Channel 5 */
@@ -459,13 +538,13 @@ static const uart_conf_t uart_config[] = {
         .tx_af      = GPIO_AF7,
         .bus        = APB1,
         .irqn       = USART2_IRQn,
-#if IS_USED(MODULE_PERIPH_UART_HW_FC)
+#if MODULE_PERIPH_UART_HW_FC
         .cts_pin    = GPIO_UNDEF,               /* CTS is not connected */
         .rts_pin    = GPIO_UNDEF,               /* RTS is not connected */
 #endif
         .type       = STM32_USART,
         .clk_src    = 0,                        /* Use APB clock */
-#if IS_USED(MODULE_PERIPH_DMA)
+#if MODULE_PERIPH_DMA
         .dma        = 4,                        /* DMA1 Channel 7 */
         .dma_chan   = 2,                        /* CxS = 2 */
 #endif
@@ -479,19 +558,19 @@ static const uart_conf_t uart_config[] = {
         .tx_af      = GPIO_AF8,
         .bus        = APB12,
         .irqn       = LPUART1_IRQn,
-#if IS_USED(MODULE_PERIPH_UART_HW_FC)
+#if MODULE_PERIPH_UART_HW_FC
         .cts_pin    = GPIO_UNDEF,               /* CTS is not connected */
         .rts_pin    = GPIO_UNDEF,               /* RTS is not connected */
 #endif
         .type       = STM32_LPUART,
         .clk_src    = 0,                        /* Use APB clock */
-#if IS_USED(MODULE_PERIPH_DMA)
+#if MODULE_PERIPH_DMA
         .dma        = 5,                        /* DMA2 Channel 6 */
         .dma_chan   = 4,                        /* CxS = 4 */
 #endif
     },
 
-#if !IS_USED(MODULE_PERIPH_SPI_STMOD)
+#if !MODULE_PERIPH_SPI_STMOD
     {   /* Pmod/STMod+ connector if solder bridges SB6, SB7, SB8 are closed (default) */
         .dev        = USART1,
         .rcc_mask   = RCC_APB2ENR_USART1EN,
@@ -501,7 +580,7 @@ static const uart_conf_t uart_config[] = {
         .tx_af      = GPIO_AF7,
         .bus        = APB2,
         .irqn       = USART1_IRQn,
-#if IS_USED(MODULE_PERIPH_UART_HW_FC)
+#if MODULE_PERIPH_UART_HW_FC
         .cts_pin    = GPIO_PIN(PORT_G, 11),
         .rts_pin    = GPIO_PIN(PORT_G, 12),
         .cts_af     = GPIO_AF7,
@@ -509,12 +588,12 @@ static const uart_conf_t uart_config[] = {
 #endif
         .type       = STM32_USART,
         .clk_src    = 0,                        /* Use APB clock */
-#if IS_USED(MODULE_PERIPH_DMA)
+#if MODULE_PERIPH_DMA
         .dma        = 2,                        /* DMA1 Channel 4 */
         .dma_chan   = 2,                        /* CxS = 2 */
 #endif
     },
-#endif /* !IS_USED(MODULE_PERIPH_SPI_STMOD) */
+#endif /* !MODULE_PERIPH_SPI_STMOD */
 };
 
 #define UART_0_ISR          (isr_usart2)

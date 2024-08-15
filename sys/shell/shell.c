@@ -13,11 +13,12 @@
  * @{
  *
  * @file
- * @brief       Implementation of a very simple command interpreter.
+ * @brief       Implementation of a simple command interpreter.
  *              For each command (i.e. "echo"), a handler can be specified.
  *              If the first word of a user-entered command line matches the
- *              name of a handler, the handler will be called with the whole
- *              command line as parameter.
+ *              name of a handler, the handler will be called with the remaining
+ *              arguments passed in a manner similar to `main()`'s argc/argv
+ *              parameters.
  *
  * @author      Kaspar Schleiser <kaspar@schleiser.de>
  * @author      René Kijewski <rene.kijewski@fu-berlin.de>
@@ -39,6 +40,11 @@
 #include "xfa.h"
 #include "shell.h"
 #include "shell_lock.h"
+
+#ifdef MODULE_VFS
+#include <fcntl.h>
+#include "vfs.h"
+#endif
 
 /* define shell command cross file array */
 XFA_INIT_CONST(shell_command_xfa_t*, shell_commands_xfa);
@@ -205,7 +211,7 @@ static void print_help(const shell_command_t *command_list)
  *
  *
  */
-static void handle_input_line(const shell_command_t *command_list, char *line)
+int shell_handle_input_line(const shell_command_t *command_list, char *line)
 {
     /* first we need to calculate the number of arguments */
     int argc = 0;
@@ -296,22 +302,28 @@ static void handle_input_line(const shell_command_t *command_list, char *line)
 
     if (pstate != PARSE_BLANK && pstate != PARSE_UNQUOTED) {
         printf("shell: incorrect quoting\n");
-        return;
+        return -EINVAL;
     }
 
     if (argc == 0) {
-        return;
+        return 0;
     }
 
     /* then we fill the argv array */
     int collected;
-    char *argv[argc];
+
+    /* allocate argv on the stack leaving space for NULL termination */
+    char *argv[argc + 1];
 
     readpos = line;
     for (collected = 0; collected < argc; collected++) {
         argv[collected] = readpos;
         readpos += strlen(readpos) + 1;
     }
+
+    /* NULL terminate argv. See `shell_command_handler_t` doc in shell.h for
+       rationale. */
+    argv[argc] = NULL;
 
     /* then we call the appropriate handler */
     shell_command_handler_t handler = find_handler(command_list, argv[0]);
@@ -320,19 +332,23 @@ static void handle_input_line(const shell_command_t *command_list, char *line)
             shell_pre_command_hook(argc, argv);
             int res = handler(argc, argv);
             shell_post_command_hook(res, argc, argv);
+            return res;
         }
         else {
-            handler(argc, argv);
+            return handler(argc, argv);
         }
     }
     else {
         if (strcmp("help", argv[0]) == 0) {
             print_help(command_list);
+            return 0;
         }
         else {
             printf("shell: command not found: %s\n", argv[0]);
         }
     }
+
+    return -ENOEXEC;
 }
 
 __attribute__((weak)) void shell_post_readline_hook(void)
@@ -511,10 +527,51 @@ void shell_run_once(const shell_command_t *shell_commands,
                 break;
 
             default:
-                handle_input_line(shell_commands, line_buf);
+                shell_handle_input_line(shell_commands, line_buf);
                 break;
         }
 
         print_prompt();
     }
 }
+
+#ifdef MODULE_VFS
+int shell_parse_file(const shell_command_t *shell_commands,
+                     const char *filename, unsigned *line_nr)
+{
+    char buffer[SHELL_DEFAULT_BUFSIZE];
+
+    if (line_nr) {
+        *line_nr = 0;
+    }
+
+    int res, fd = vfs_open(filename, O_RDONLY, 0);
+    if (fd < 0) {
+        printf("Can't open %s\n", filename);
+        return fd;
+    }
+
+    while (1) {
+        res = vfs_readline(fd, buffer, sizeof(buffer));
+        if (line_nr) {
+            *line_nr += 1;
+        }
+        /* error reading line */
+        if (res < 0) {
+            break;
+        }
+        /* skip comment and empty lines */
+        if (buffer[0] == '#') {
+            continue;
+        }
+        res = shell_handle_input_line(shell_commands, buffer);
+        if (res) {
+            break;
+        }
+    }
+
+    vfs_close(fd);
+
+    return res;
+}
+#endif

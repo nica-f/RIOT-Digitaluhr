@@ -169,7 +169,7 @@ int test_init(void)
 {
     /* create battery monitor thread */
     thread_create(batmon_stack, sizeof(batmon_stack), THREAD_PRIORITY_MAIN - 1,
-                  THREAD_CREATE_STACKTEST, batmon_thread, NULL, "batmon");
+                  0, batmon_thread, NULL, "batmon");
     return 0;
 }
 
@@ -191,7 +191,7 @@ int netdev_ieee802154_minimal_init_devs(netdev_event_cb_t cb) {
         at86rf215_t *at86rf215_subghz = NULL;
         at86rf215_t *at86rf215_24ghz = NULL;
 
-        printf("%d out of %d\n", i + 1, AT86RF215_NUM);
+        printf("%d out of %u\n", i + 1, (unsigned)AT86RF215_NUM);
 
         if (IS_USED(MODULE_AT86RF215_SUBGHZ)) {
             puts("Sub-GHz");
@@ -247,7 +247,7 @@ int main(void)
 
     /* create battery monitor thread */
     thread_create(batmon_stack, sizeof(batmon_stack), THREAD_PRIORITY_MAIN - 1,
-                  THREAD_CREATE_STACKTEST, batmon_thread, NULL, "batmon");
+                  0, batmon_thread, NULL, "batmon");
 
     /* start the shell */
     puts("Initialization successful - starting the shell now");

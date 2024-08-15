@@ -88,7 +88,7 @@ static void *_listen_thread(void *ctx)
         res = sock_udp_recv(&sock, buf, sizeof(buf), 2 * delay_us, NULL);
         if (res < 0) {
             if (res != -ETIMEDOUT) {
-                printf("Error receiving message: %zd\n", res);
+                printf("Error receiving message: %" PRIdSIZE "\n", res);
             }
             continue;
         }
@@ -171,10 +171,10 @@ int benchmark_udp_start(const char *server, uint16_t port)
 
     running = true;
     thread_create(listen_thread_stack, sizeof(listen_thread_stack),
-                  THREAD_PRIORITY_MAIN - 2, THREAD_CREATE_STACKTEST,
+                  THREAD_PRIORITY_MAIN - 2, 0,
                   _listen_thread, NULL, "UDP receiver");
     thread_create(send_thread_stack, sizeof(send_thread_stack),
-                  THREAD_PRIORITY_MAIN - 1, THREAD_CREATE_STACKTEST,
+                  THREAD_PRIORITY_MAIN - 1, 0,
                   _send_thread, &remote, "UDP sender");
     return 0;
 }

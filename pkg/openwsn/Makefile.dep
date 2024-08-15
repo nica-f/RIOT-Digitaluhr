@@ -1,3 +1,6 @@
+FEATURES_REQUIRED += netif_openwsn
+FEATURES_REQUIRED += periph_uart
+
 ifneq (,$(filter openwsn_openstack,$(USEMODULE)))
   USEMODULE += openwsn_iphc
   USEMODULE += openwsn_ipv6
@@ -112,7 +115,7 @@ ifneq (,$(filter openwsn_sock_async,$(USEMODULE)))
   USEMODULE += sock_async
 endif
 
-ifneq (,$(filter shell_commands,$(USEMODULE)))
+ifneq (,$(filter shell_cmds_default,$(USEMODULE)))
   USEMODULE += l2util
 endif
 # This port currently requires setting ISR_STACKSIZE

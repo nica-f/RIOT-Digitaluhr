@@ -2,7 +2,6 @@ ifeq (FreeBSD,$(OS))
   DISABLE_LIBSTDCPP ?= 1
 endif
 
-FEATURES_PROVIDED += arch_32bit
 FEATURES_PROVIDED += arch_native
 FEATURES_PROVIDED += cpp
 ifneq ($(DISABLE_LIBSTDCPP),1)
@@ -18,6 +17,7 @@ FEATURES_PROVIDED += periph_hwrng
 FEATURES_PROVIDED += periph_pm
 FEATURES_PROVIDED += periph_pwm
 FEATURES_PROVIDED += periph_timer_periodic
+FEATURES_PROVIDED += periph_timer_query_freqs
 ifeq ($(OS) $(OS_ARCH),Linux x86_64)
   FEATURES_PROVIDED += rust_target
 endif
@@ -30,10 +30,4 @@ ifeq ($(OS),Linux)
   FEATURES_PROVIDED += periph_gpio periph_gpio_irq
   # CAN is only supported on Linux through socketCAN
   FEATURES_PROVIDED += periph_can
-endif
-
-# This configuration enables modules that are only available when using Kconfig
-# module modelling
-ifeq (1, $(TEST_KCONFIG))
-  KCONFIG_CPU_CONFIG += $(RIOTCPU)/native/native.config
 endif

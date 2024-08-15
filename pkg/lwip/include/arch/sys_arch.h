@@ -101,13 +101,13 @@ typedef struct {
 
 static inline bool sys_mbox_valid(sys_mbox_t *mbox)
 {
-    return (mbox != NULL) && (mbox->mbox.cib.mask != 0);
+    return (mbox != NULL) && (mbox_size(&mbox->mbox) != 0);
 }
 
 static inline void sys_mbox_set_invalid(sys_mbox_t *mbox)
 {
     if (mbox != NULL) {
-        mbox->mbox.cib.mask = 0;
+        mbox_unset(&mbox->mbox);
     }
 }
 
@@ -116,6 +116,8 @@ static inline void sys_mbox_set_invalid(sys_mbox_t *mbox)
 /** @} */
 
 typedef kernel_pid_t sys_thread_t;      /**< Platform specific thread type */
+
+extern kernel_pid_t lwip_tcpip_thread;  /**< PID of the lwIP TCP/IP thread */
 
 /**
  * @name    Functions for locking/unlocking core to assure thread safety.

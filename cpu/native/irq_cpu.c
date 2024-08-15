@@ -13,10 +13,16 @@
  * @author  Ludwig Knüpfer <ludwig.knuepfer@fu-berlin.de>
  */
 
+/* __USE_GNU for gregs[REG_EIP] access under glibc
+ * _GNU_SOURCE for REG_EIP and strsignal() under musl */
+#define __USE_GNU
+#define _GNU_SOURCE
+
 #include <err.h>
+#include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdlib.h>
 
 #ifdef HAVE_VALGRIND_H
 #include <valgrind.h>
@@ -25,20 +31,16 @@
 #include <valgrind/valgrind.h>
 #define VALGRIND_DEBUG DEBUG
 #else
-#define VALGRIND_STACK_REGISTER(...)
+#define VALGRIND_STACK_REGISTER(...) (0)
 #define VALGRIND_DEBUG(...)
 #endif
-
-/* __USE_GNU for gregs[REG_EIP] access under Linux */
-#define __USE_GNU
-#include <signal.h>
-#undef __USE_GNU
 
 #include "irq.h"
 #include "cpu.h"
 #include "periph/pm.h"
 
 #include "native_internal.h"
+#include "test_utils/expect.h"
 
 #define ENABLE_DEBUG 0
 #include "debug.h"
@@ -49,16 +51,16 @@ volatile int _native_in_syscall;
 
 static sigset_t _native_sig_set, _native_sig_set_dint;
 
-char __isr_stack[SIGSTKSZ];
+char __isr_stack[THREAD_STACKSIZE_DEFAULT];
+const size_t __isr_stack_size = sizeof(__isr_stack);
 ucontext_t native_isr_context;
 ucontext_t *_native_cur_ctx, *_native_isr_ctx;
 
-volatile unsigned int _native_saved_eip;
+volatile uintptr_t _native_saved_eip;
 volatile int _native_sigpend;
 int _sig_pipefd[2];
 
 static _native_callback_t native_irq_handlers[255];
-char sigalt_stk[SIGSTKSZ];
 
 void *thread_isr_stack_pointer(void)
 {
@@ -353,9 +355,14 @@ void native_isr_entry(int sig, siginfo_t *info, void *context)
     _native_saved_eip = ((ucontext_t *)context)->uc_mcontext.arm_pc;
     ((ucontext_t *)context)->uc_mcontext.arm_pc = (unsigned int)&_native_sig_leave_tramp;
 #else /* Linux/x86 */
+  #ifdef __x86_64__
+    _native_saved_eip = ((ucontext_t *)context)->uc_mcontext.gregs[REG_RIP];
+    ((ucontext_t *)context)->uc_mcontext.gregs[REG_RIP] = (uintptr_t)&_native_sig_leave_tramp;
+  #else
     //printf("\n\033[31mEIP:\t%p\ngo switching\n\n\033[0m", (void*)((ucontext_t *)context)->uc_mcontext.gregs[REG_EIP]);
     _native_saved_eip = ((ucontext_t *)context)->uc_mcontext.gregs[REG_EIP];
     ((ucontext_t *)context)->uc_mcontext.gregs[REG_EIP] = (unsigned int)&_native_sig_leave_tramp;
+  #endif
 #endif
 #endif
 }
@@ -466,9 +473,9 @@ void native_interrupt_init(void)
     struct sigaction sa;
     DEBUG("native_interrupt_init\n");
 
-    VALGRIND_STACK_REGISTER(__isr_stack, __isr_stack + sizeof(__isr_stack));
+    (void) VALGRIND_STACK_REGISTER(__isr_stack, __isr_stack + sizeof(__isr_stack));
     VALGRIND_DEBUG("VALGRIND_STACK_REGISTER(%p, %p)\n",
-                   (void *)__isr_stack, (void*)((int)__isr_stack + sizeof(__isr_stack)));
+                   (void *)__isr_stack, (void*)(__isr_stack + sizeof(__isr_stack)));
 
     _native_sigpend = 0;
 
@@ -518,8 +525,9 @@ void native_interrupt_init(void)
     _native_isr_ctx = &native_isr_context;
 
     static stack_t sigstk;
-    sigstk.ss_sp = sigalt_stk;
-    sigstk.ss_size = sizeof(__isr_stack);
+    sigstk.ss_sp = malloc(SIGSTKSZ);
+    expect(sigstk.ss_sp != NULL);
+    sigstk.ss_size = SIGSTKSZ;
     sigstk.ss_flags = 0;
 
     if (sigaltstack(&sigstk, NULL) < 0) {

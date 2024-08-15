@@ -40,6 +40,8 @@
 #include "periph/f7/periph_cpu.h"
 #elif defined(CPU_FAM_STM32G0)
 #include "periph/g0/periph_cpu.h"
+#elif defined(CPU_FAM_STM32C0)
+#include "periph/c0/periph_cpu.h"
 #elif defined(CPU_FAM_STM32G4)
 #include "periph/g4/periph_cpu.h"
 #elif defined(CPU_FAM_STM32L0)
@@ -70,6 +72,7 @@
 #include "periph/cpu_pm.h"
 #include "periph/cpu_pwm.h"
 #include "periph/cpu_qdec.h"
+#include "periph/cpu_sdmmc.h"
 #include "periph/cpu_spi.h"
 #include "periph/cpu_timer.h"
 #include "periph/cpu_uart.h"
@@ -169,6 +172,36 @@ typedef struct {
 #else
 #define USBDEV_NUM_ENDPOINTS            8
 #endif
+
+/* unify names across STM32 families */
+#ifdef SPI_CR1_CPHA_Msk
+#  define STM32_SPI_CPHA_Msk            SPI_CR1_CPHA_Msk
+#endif
+#ifdef SPI_CFG2_CPHA_Msk
+#  define STM32_SPI_CPHA_Msk            SPI_CFG2_CPHA_Msk
+#endif
+#ifdef SPI_CR1_CPOL_Msk
+#  define STM32_SPI_CPOL_Msk            SPI_CR1_CPOL_Msk
+#endif
+#ifdef SPI_CFG2_CPOL_Msk
+#  define STM32_SPI_CPOL_Msk            SPI_CFG2_CPOL_Msk
+#endif
+
+/**
+ * @name   Override the SPI mode values
+ *
+ * As the mode is set in bit 3 and 2 of the configuration register, we put the
+ * correct configuration there
+ * @{
+ */
+#define HAVE_SPI_MODE_T
+typedef enum {
+    SPI_MODE_0 = 0,                                         /**< CPOL=0, CPHA=0 */
+    SPI_MODE_1 = STM32_SPI_CPHA_Msk,                        /**< CPOL=0, CPHA=1 */
+    SPI_MODE_2 = STM32_SPI_CPOL_Msk,                        /**< CPOL=1, CPHA=0 */
+    SPI_MODE_3 = STM32_SPI_CPOL_Msk | STM32_SPI_CPHA_Msk,   /**< CPOL=1, CPHA=0 */
+} spi_mode_t;
+/** @} */
 
 #endif /* !DOXYGEN */
 

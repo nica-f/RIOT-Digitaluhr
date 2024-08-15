@@ -195,9 +195,9 @@ void saul_init_devs(void)
         extern void auto_init_lsm303dlhc(void);
         auto_init_lsm303dlhc();
     }
-    if (IS_USED(MODULE_LSM6DSL)) {
-        extern void auto_init_lsm6dsl(void);
-        auto_init_lsm6dsl();
+    if (IS_USED(MODULE_LSM6DSXX)) {
+        extern void auto_init_lsm6dsxx(void);
+        auto_init_lsm6dsxx();
     }
     if (IS_USED(MODULE_LTC4150)) {
         extern void auto_init_ltc4150(void);
@@ -206,6 +206,10 @@ void saul_init_devs(void)
     if (IS_USED(MODULE_MAG3110)) {
         extern void auto_init_mag3110(void);
         auto_init_mag3110();
+    }
+    if (IS_USED(MODULE_MAX31855)) {
+        extern void auto_init_max31855(void);
+        auto_init_max31855();
     }
     if (IS_USED(MODULE_MCP47XX)) {
         extern void auto_init_mcp47xx(void);
@@ -342,5 +346,9 @@ void saul_init_devs(void)
     if (IS_USED(MODULE_SERVO)) {
         extern void auto_init_servo(void);
         auto_init_servo();
+    }
+    if (IS_USED(MODULE_WS281X)) {
+        extern void auto_init_ws281x(void);
+        auto_init_ws281x();
     }
 }

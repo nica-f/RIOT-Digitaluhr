@@ -6,8 +6,7 @@ BOARD_INSUFFICIENT_MEMORY := \
     atmega328p \
     atmega328p-xplained-mini \
     atmega8 \
-    msb-430 \
-    msb-430h \
+    nucleo-c031c6 \
     nucleo-f031k6 \
     nucleo-f042k6 \
     nucleo-l011k4 \
@@ -17,5 +16,4 @@ BOARD_INSUFFICIENT_MEMORY := \
     stk3200 \
     stm32f030f4-demo \
     telosb \
-    z1 \
     #

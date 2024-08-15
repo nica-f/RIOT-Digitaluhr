@@ -71,11 +71,11 @@ extern uint8_t port_IntStackTop;
 void thread_isr_stack_init(void)
 {
     /* code from thread.c, please see the copyright notice there */
-#ifndef MCU_ESP8266
+#ifndef CPU_ESP8266
     #define sp (&port_IntStackTop)
-#else /* !MCU_ESP8266 */
+#else /* !CPU_ESP8266 */
     register uint32_t *sp __asm__ ("a1");
-#endif /* !MCU_ESP8266 */
+#endif /* !CPU_ESP8266 */
 
     /* assign each int of the stack the value of it's address. We can safely
      * cast, as stack is aligned. Use an intermediate cast to uintptr_t to
@@ -92,10 +92,9 @@ void thread_isr_stack_init(void)
 
 int thread_isr_stack_usage(void)
 {
-    /* cppcheck-suppress comparePointers
-     * (reason: comes from ESP-SDK, so should be valid) */
-    return &port_IntStackTop - &port_IntStack -
-           thread_measure_stack_free((char*)&port_IntStack);
+    size_t stack_size = (uintptr_t)&port_IntStackTop - (uintptr_t)&port_IntStack;
+    return stack_size -
+           measure_stack_free_internal((char *)&port_IntStack, stack_size);
 }
 
 void *thread_isr_stack_pointer(void)

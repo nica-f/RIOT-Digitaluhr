@@ -52,7 +52,6 @@ int gnrc_ipv6_nib_pl_set(unsigned iface,
     }
 #ifdef MODULE_GNRC_NETIF
     gnrc_netif_t *netif = gnrc_netif_get_by_pid(iface);
-    int idx;
 
     if (netif == NULL) {
         _nib_release();
@@ -64,9 +63,7 @@ int gnrc_ipv6_nib_pl_set(unsigned iface,
      * address resolution towards the LoWPAN and not the upstream interface
      * See https://github.com/RIOT-OS/RIOT/pull/10627 and follow-ups
      */
-    if ((!gnrc_netif_is_6ln(netif) || gnrc_netif_is_6lbr(netif)) &&
-        ((idx = gnrc_netif_ipv6_addr_match(netif, pfx)) >= 0) &&
-        (ipv6_addr_match_prefix(&netif->ipv6.addrs[idx], pfx) >= pfx_len)) {
+    if (!gnrc_netif_is_6ln(netif) || gnrc_netif_is_6lbr(netif)) {
         dst->flags |= _PFX_ON_LINK;
     }
 
@@ -161,7 +158,7 @@ void gnrc_ipv6_nib_pl_print(gnrc_ipv6_nib_pl_t *entry)
         printf(" expires %lu sec", (entry->valid_until - now) / MS_PER_SEC);
     }
     if (entry->pref_until < UINT32_MAX) {
-        printf(" deprecates %lu sec", (entry->pref_until - now) / MS_PER_SEC);
+        printf(" deprecates %lu sec", (now >= entry->pref_until ? 0 : entry->pref_until - now) / MS_PER_SEC);
     }
     puts("");
 }

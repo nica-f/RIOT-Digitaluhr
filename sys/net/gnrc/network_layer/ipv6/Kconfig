@@ -6,13 +6,8 @@
 #
 menu "IPv6"
 
-menuconfig KCONFIG_USEMODULE_GNRC_IPV6
-    bool "Configure GNRC IPv6 module"
+menu "GNRC IPv6 module"
     depends on USEMODULE_GNRC_IPV6
-    help
-        Configure GNRC IPv6 module using Kconfig.
-
-if KCONFIG_USEMODULE_GNRC_IPV6
 
 config GNRC_IPV6_MSG_QUEUE_SIZE_EXP
     int "Exponent for the message queue size used for the IPv6 thread (as 2^n)"
@@ -22,7 +17,30 @@ config GNRC_IPV6_MSG_QUEUE_SIZE_EXP
         represents the exponent of 2^n, which will be used as the size of
         the queue.
 
-endif # KCONFIG_USEMODULE_GNRC_IPV6
+config GNRC_IPV6_STATIC_LLADDR_ENABLE
+    bool "Add a static IPv6 link local address to any network interface"
+    help
+         This allows to specify a certain link local IPv6 address to be assigned
+         to a network interface on startup, which might be handy for testing.
+
+         A interface will keep its auto-generated link local address, too.
+
+config GNRC_IPV6_STATIC_LLADDR
+    string "Static link-local address"
+    depends on GNRC_IPV6_STATIC_LLADDR_ENABLE
+    default "fe80::cafe:cafe:cafe:1"
+    help
+         The address is configured on each interface and incremented by the
+         interface PID.
+
+config GNRC_IPV6_STATIC_LLADDR_IS_FIXED
+    bool "Same link-local address on every interface"
+    depends on GNRC_IPV6_STATIC_LLADDR_ENABLE
+    help
+         Dont add the interface PID to the least significant byte
+         of the address.
+
+endmenu # GNRC IPv6 module
 
 rsource "blacklist/Kconfig"
 rsource "ext/frag/Kconfig"

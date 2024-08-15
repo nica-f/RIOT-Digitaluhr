@@ -21,7 +21,7 @@
 #define BOARD_H
 
 #include "cpu.h"
-#include "mtd.h"
+#include "periph/gpio.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,6 +57,15 @@ extern "C" {
 #define LED0_ON             (LED_PORT.OUTCLR.reg = LED0_MASK)
 #define LED0_OFF            (LED_PORT.OUTSET.reg = LED0_MASK)
 #define LED0_TOGGLE         (LED_PORT.OUTTGL.reg = LED0_MASK)
+
+#define LED1_PIN            GPIO_PIN(PC, 15)
+
+#define LED_PORT            PORT->Group[PC]
+#define LED1_MASK           (1 << 15)
+
+#define LED1_ON             (LED_PORT.OUTCLR.reg = LED1_MASK)
+#define LED1_OFF            (LED_PORT.OUTSET.reg = LED1_MASK)
+#define LED1_TOGGLE         (LED_PORT.OUTTGL.reg = LED1_MASK)
 /** @} */
 
 /**
@@ -68,14 +77,21 @@ extern "C" {
 /** @} */
 
 /**
+ * @name ATA6561 STANDBY pin definition
+ * @{
+ */
+#define AT6561_STBY_PIN            GPIO_PIN(PC, 13)
+/** @} */
+
+/**
  * @name MTD configuration
  * @{
  */
-extern mtd_dev_t *mtd0, *mtd1, *mtd2;
-#define MTD_0       mtd0
-#define MTD_1       mtd1
-#define MTD_2       mtd2
-#define MTD_NUMOF   3
+#define MTD_0   mtd_dev_get(0)  /**< MTD device for the QSPI Flash */
+#define MTD_1   mtd_dev_get(1)  /**< MTD device for the AT24MAC402 serial EEPROM */
+#define MTD_2   mtd_dev_get(2)  /**< MTD device for the SD/MMC Card */
+
+#define CONFIG_SDMMC_GENERIC_MTD_OFFSET     2   /**< MTD_2 is used for the SD Card */
 /** @} */
 
 /**

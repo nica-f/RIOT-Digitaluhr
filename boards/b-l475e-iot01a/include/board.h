@@ -32,9 +32,11 @@ extern "C" {
  * @{
  */
 #define LED0_PIN_NUM        5
+#define LED0_PORT           GPIO_PORT_A /**< GPIO port of LED 0 */
 #define LED0_PORT_NUM       PORT_A
 
 #define LED1_PIN_NUM        14
+#define LED1_PORT           GPIO_PORT_B /**< GPIO port of LED 1 */
 #define LED1_PORT_NUM       PORT_B
 /** @} */
 
@@ -71,8 +73,8 @@ extern "C" {
  * @name    LSM6DSL accelerometer sensor configuration
  * @{
  */
-#define LSM6DSL_PARAM_I2C   I2C_DEV(1)
-#define LSM6DSL_PARAM_ADDR  (0x6A)
+#define LSM6DSXX_PARAM_I2C   I2C_DEV(1)
+#define LSM6DSXX_PARAM_ADDR  (0x6A)
 /** @} */
 
 #ifdef __cplusplus

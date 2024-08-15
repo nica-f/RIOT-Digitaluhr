@@ -213,7 +213,7 @@ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg,
     if (stack == NULL) {
         return ERR_MEM;
     }
-    if ((res = thread_create(stack, stacksize, prio, THREAD_CREATE_STACKTEST,
+    if ((res = thread_create(stack, stacksize, prio, 0,
                              _lwip_thread_wrapper, &params,
                              name)) <= KERNEL_PID_UNDEF) {
         abort();
@@ -223,7 +223,7 @@ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg,
     return res;
 }
 
-static kernel_pid_t lwip_tcpip_thread = KERNEL_PID_UNDEF;
+kernel_pid_t lwip_tcpip_thread = KERNEL_PID_UNDEF;
 static kernel_pid_t lwip_lock_thread;
 
 void sys_mark_tcpip_thread(void) {
